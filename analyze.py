@@ -1,14 +1,21 @@
 """Simple Sentinel-2 analysis utilities.
 
-This module combines lightweight helpers for cloud masking and change detection:
+Usage
+-----
+>>> rgb, cloud = cloud_mask_and_rgb("/path/to/S2_scene")
+>>> score = change_score(rgb_baseline, rgb_recent, cloud_baseline, cloud_recent)
 
-* ``cloud_mask_and_rgb(scene_path)`` loads Sentinel-2 RGB bands and estimates a cloud
-  mask from the scene classification (SCL) band when available.
-* ``change_score(baseline_rgb, recent_rgb, ...)`` computes a normalized brightness-change
-  score in ``[0, 1]`` over non-cloud pixels.
-* ``compute_simple_cloud_mask(scl_band)`` and
-  ``detect_change_from_band_difference(before_band, after_band, ...)`` provide
-  smaller, array-oriented helpers useful in tests and prototyping.
+Key behavior and edge cases
+---------------------------
+* ``cloud_mask_and_rgb`` expects Sentinel-2 bands B04, B03, and B02 to exist under
+  ``scene_path`` (or in the parent directory when a file path is provided).
+* Cloud masking priority is:
+  1. use SCL cloud-like classes when an SCL raster exists,
+  2. otherwise use a naive B8A threshold,
+  3. otherwise return an all-clear (all ``False``) mask.
+* ``change_score`` computes a robust median-brightness change over non-cloud pixels.
+  If all pixels are masked, it returns ``0.0``.
+* All shape mismatches raise ``ValueError`` with explicit diagnostics.
 """
 
 from __future__ import annotations
@@ -64,7 +71,25 @@ def compute_simple_cloud_mask(scl_band: np.ndarray) -> np.ndarray:
 
 
 def cloud_mask_and_rgb(scene_path: str) -> tuple[np.ndarray, np.ndarray]:
-    """Load RGB bands and build a cloud mask from SCL or a B8A fallback."""
+    """Load Sentinel-2 RGB and compute a cloud mask.
+
+    Parameters
+    ----------
+    scene_path:
+        Path to a Sentinel-2 scene directory (or a file inside the scene).
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        ``(rgb_array, cloud_mask)`` where ``rgb_array`` has shape ``(H, W, 3)`` and
+        ``cloud_mask`` has shape ``(H, W)``.
+
+    Notes
+    -----
+    * SCL classes 3, 8, 9, 10, 11 are treated as cloud/obstruction classes.
+    * The B8A fallback uses a naive threshold (``> 0.25`` for reflectance-like values,
+      or ``> 2500`` for scaled integer-like values).
+    """
     scene_dir = _scene_root(scene_path)
 
     b04_path = _find_band_file(scene_dir, "B04")
@@ -117,7 +142,20 @@ def change_score(
     cloud_mask_baseline: Optional[np.ndarray] = None,
     cloud_mask_recent: Optional[np.ndarray] = None,
 ) -> float:
-    """Compute a normalized brightness-change score in [0, 1]."""
+    """Compute a normalized brightness change score in ``[0, 1]``.
+
+    The score is:
+
+    ``abs(median(recent) - median(baseline)) / (abs(median(recent)) + abs(median(baseline)) + eps)``
+
+    where medians are computed from per-pixel RGB mean brightness over pixels that are
+    not marked cloudy in either input cloud mask.
+
+    Edge cases
+    ----------
+    * Returns ``0.0`` if there are no valid non-cloud pixels.
+    * Raises ``ValueError`` for image/mask shape mismatches.
+    """
     baseline = np.asarray(baseline_rgb, dtype=np.float32)
     recent = np.asarray(recent_rgb, dtype=np.float32)
 
