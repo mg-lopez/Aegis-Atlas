@@ -1,0 +1,7 @@
+numpy
+matplotlib
+planetary-computer
+pystac-client
+rasterio
+requests
+pytest
