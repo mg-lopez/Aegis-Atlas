@@ -150,6 +150,12 @@ def run_pipeline(bbox: list[float], start_date: str, end_date: str) -> dict:
     return deliver_alert(region=bbox, score=score, source_scenes=compared)
 
 
+def run_demo(bbox: list[float], start_date: str, end_date: str) -> dict:
+    """Public helper used by demo script to execute one pipeline run."""
+
+    return run_pipeline(bbox=bbox, start_date=start_date, end_date=end_date)
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build CLI parser for the agent skeleton."""
 

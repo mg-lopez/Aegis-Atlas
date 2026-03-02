@@ -92,5 +92,6 @@ def find_best_sentinel_scenes(
     )
 
     items = list(search.items())
-    ranked = sorted(items, key=_get_cloud_cover)
+    filtered = [item for item in items if _get_cloud_cover(item) <= float(max_cloud)]
+    ranked = sorted(filtered, key=_get_cloud_cover)
     return [_to_scene_summary(item) for item in ranked[:limit]]
