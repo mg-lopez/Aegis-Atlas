@@ -55,6 +55,24 @@ def test_find_best_sentinel_scenes_sorts_by_cloud_cover(monkeypatch):
     assert [scene.id for scene in scenes] == ["low", "mid"]
 
 
+def test_find_best_sentinel_scenes_filters_cloud_cover_when_response_exceeds_threshold(monkeypatch):
+    items = [make_item("clear", 3), make_item("cloudy", 70), make_item("acceptable", 20)]
+    client = FakeClient(items)
+    FakeClientModule._client = client
+    monkeypatch.setattr(stac_fetcher, "Client", FakeClientModule)
+
+    scenes = stac_fetcher.find_best_sentinel_scenes(
+        bbox=[-1, -1, 1, 1],
+        start_date="2024-07-01",
+        end_date="2024-07-31",
+        max_cloud=25,
+        limit=3,
+    )
+
+    assert [scene.id for scene in scenes] == ["clear", "acceptable"]
+    assert client.search_calls[0]["query"] == {"eo:cloud_cover": {"lte": 25}}
+
+
 def test_find_best_sentinel_scenes_handles_missing_cloud_metadata(monkeypatch):
     items = [make_item("unknown", None), make_item("known", 15)]
     FakeClientModule._client = FakeClient(items)
@@ -68,4 +86,4 @@ def test_find_best_sentinel_scenes_handles_missing_cloud_metadata(monkeypatch):
         limit=2,
     )
 
-    assert [scene.id for scene in scenes] == ["known", "unknown"]
+    assert [scene.id for scene in scenes] == ["known"]

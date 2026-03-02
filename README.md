@@ -16,7 +16,7 @@ Bootstrap for a Watch → Navigate → Analyze → Deliver hazard-intelligence a
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python demo/run_demo.py
+python demo/run_demo.py --bbox "-122.65,38.20,-122.10,38.65" --start-date 2024-08-01 --end-date 2024-08-31
 ```
 
 ## Run tests
@@ -44,8 +44,10 @@ docker run --rm aegis-atlas
 3. Run demo:
 
    ```python
-   !python demo/run_demo.py
+   !python demo/run_demo.py --bbox "-122.65,38.20,-122.10,38.65" --start-date 2024-08-01 --end-date 2024-08-31
    ```
+
+The demo writes the latest alert payload to `demo/last_alert.json` for quick inspection.
 
 ## Environment variables
 
