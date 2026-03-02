@@ -7,6 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV PYTHONUNBUFFERED=1
+RUN pytest -q
 
-CMD ["python", "demo/run_demo.py"]
+ENTRYPOINT ["python", "demo/run_demo.py"]
