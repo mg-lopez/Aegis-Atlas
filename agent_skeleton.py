@@ -76,6 +76,52 @@ def navigate_to_scenes(bbox: list[float], start_date: str, end_date: str) -> lis
     return scenes
 
 
+def watch_for_trigger(
+    bbox: list[float],
+    start_date: str,
+    end_date: str,
+) -> tuple[str | None, list[SceneSummary], str | None]:
+    """Watch step with GDACS-first trigger selection and STAC fallback.
+
+    Returns a tuple ``(trigger_source, fallback_scenes, no_trigger_reason)`` where
+    ``trigger_source`` is one of ``"gdacs"``, ``"stac"``, or ``None`` when no
+    trigger is detected.
+    """
+
+    gdacs_events = poll_gdacs(bbox)
+    if gdacs_events:
+        LOGGER.info("Watch: using GDACS trigger; continuing to Navigate/Analyze.")
+        return "gdacs", [], None
+
+    LOGGER.info(
+        "Watch: no GDACS trigger; falling back to STAC availability check (max_cloud=80)."
+    )
+    try:
+        fallback_scenes = find_best_sentinel_scenes(
+            bbox=bbox,
+            start_date=start_date,
+            end_date=end_date,
+            max_cloud=80.0,
+            limit=10,
+        )
+    except ModuleNotFoundError:
+        LOGGER.warning("Watch: STAC fallback unavailable; missing STAC dependencies.")
+        return None, [], "No GDACS trigger found and STAC fallback is unavailable."
+    except Exception as exc:
+        LOGGER.warning("Watch: STAC fallback check failed: %s", exc)
+        return None, [], "No GDACS trigger found and STAC fallback check failed."
+
+    if fallback_scenes:
+        LOGGER.info(
+            "Watch: STAC soft trigger found %d scenes; continuing to Analyze.",
+            len(fallback_scenes),
+        )
+        return "stac", fallback_scenes, None
+
+    LOGGER.info("Watch: no GDACS event and no STAC scenes found.")
+    return None, [], "No GDACS trigger and no Sentinel-2 scenes found for region/date range."
+
+
 def _load_demo_rgb(scene: SceneSummary, shape: tuple[int, int, int] = (64, 64, 3)) -> np.ndarray:
     """Load scene RGB for analysis in a deterministic demo-friendly way.
 
@@ -135,19 +181,29 @@ def deliver_alert(region: list[float], score: float, source_scenes: list[SceneSu
 def run_pipeline(bbox: list[float], start_date: str, end_date: str) -> dict:
     """Execute the full Watch -> Navigate -> Analyze -> Deliver pipeline."""
 
-    events = poll_gdacs(bbox)
-    if not events:
+    trigger_source, fallback_scenes, no_trigger_reason = watch_for_trigger(
+        bbox=bbox,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    if trigger_source is None:
         return {
             "region": bbox,
             "threat_level": "none",
             "score": 0.0,
-            "recommended_action": "No GDACS trigger found for region.",
+            "recommended_action": no_trigger_reason or "No trigger found.",
             "sources": [],
         }
 
     scenes = navigate_to_scenes(bbox, start_date=start_date, end_date=end_date)
     score, compared = analyze_recent_change(scenes)
-    return deliver_alert(region=bbox, score=score, source_scenes=compared)
+    if trigger_source == "stac":
+        compared_ids = {scene.id for scene in compared}
+        source_scenes = compared + [scene for scene in fallback_scenes if scene.id not in compared_ids]
+        LOGGER.info("Deliver: including fallback STAC scene IDs in alert sources.")
+    else:
+        source_scenes = compared
+    return deliver_alert(region=bbox, score=score, source_scenes=source_scenes)
 
 
 def run_demo(bbox: list[float], start_date: str, end_date: str) -> dict:
