@@ -23,3 +23,14 @@ def test_sample_mode_reports_high_threat():
 
     assert metrics["final_score"] >= 0.6
     assert alert["threat_level"] == "high"
+
+
+def test_run_demo_help_includes_use_sample_flag():
+    result = subprocess.run(
+        ["python", "demo/run_demo.py", "--help"],
+        check=True,
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+    )
+    assert "--use-sample" in result.stdout

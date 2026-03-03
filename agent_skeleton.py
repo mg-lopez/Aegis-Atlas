@@ -181,9 +181,15 @@ def deliver_alert(
 
 def run_pipeline(bbox: list[float], start_date: str, end_date: str, use_sample: bool = False) -> dict:
     if use_sample:
-        from demo.generate_sample_tiffs import generate_sample_tiffs
+        demo_dir = Path(__file__).resolve().parent / "demo"
+        baseline_path = demo_dir / "sample_baseline.tif"
+        recent_path = demo_dir / "sample_recent.tif"
 
-        baseline_path, recent_path = generate_sample_tiffs()
+        if not baseline_path.exists() or not recent_path.exists():
+            from demo.generate_sample_tiffs import generate_sample_tiffs
+
+            baseline_path, recent_path = generate_sample_tiffs(demo_dir)
+
         metrics = analyze_sample_tiffs(baseline_path, recent_path)
         sample_scenes = [
             SceneSummary(id=baseline_path.name, datetime=start_date, cloud_cover=0.0, assets={}),
