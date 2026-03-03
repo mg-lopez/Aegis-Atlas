@@ -94,3 +94,18 @@ def test_run_pipeline_returns_none_only_when_no_gdacs_and_no_stac(monkeypatch):
     assert alert["recommended_action"] == (
         "No GDACS trigger and no Sentinel-2 scenes found for region/date range."
     )
+
+
+def test_run_pipeline_use_sample_skips_stac_query(monkeypatch):
+    monkeypatch.setattr(agent_skeleton, "watch_for_trigger", lambda **kwargs: (_ for _ in ()).throw(AssertionError("STAC path should be skipped")))
+    monkeypatch.setattr(agent_skeleton, "analyze_sample_tiffs", lambda b, r: {"final_score": 0.75})
+
+    alert = agent_skeleton.run_pipeline(
+        bbox=[0, 0, 1, 1],
+        start_date="2024-08-01",
+        end_date="2024-08-31",
+        use_sample=True,
+    )
+
+    assert alert["threat_level"] == "high"
+    assert set(alert["sources"]) == {"sample_baseline.tif", "sample_recent.tif"}

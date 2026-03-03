@@ -44,7 +44,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bbox", type=_parse_bbox, default=DEFAULT_BBOX)
     parser.add_argument("--start-date", default=DEFAULT_START_DATE)
     parser.add_argument("--end-date", default=DEFAULT_END_DATE)
-    parser.add_argument("--use-sample", action="store_true", help="Run deterministic sample mode")
+    parser.add_argument(
+        "--use-sample",
+        action="store_true",
+        help="Run deterministic sample analysis instead of STAC",
+    )
     return parser
 
 
