@@ -7,7 +7,7 @@ from stac_fetcher import SceneSummary
 
 
 def _scene(scene_id: str, dt: str = "2024-08-01T00:00:00Z") -> SceneSummary:
-    return SceneSummary(id=scene_id, datetime=dt, cloud_cover=10.0, assets=["B04", "B08"])
+    return SceneSummary(id=scene_id, datetime=dt, cloud_cover=10.0, assets={"B04": "https://example/B04.tif", "B08": "https://example/B08.tif"})
 
 
 def test_watch_for_trigger_uses_stac_soft_trigger_when_gdacs_empty(monkeypatch):
@@ -62,7 +62,7 @@ def test_run_pipeline_includes_fallback_scene_ids_in_sources(monkeypatch):
         "navigate_to_scenes",
         lambda *args, **kwargs: [_scene("recent", "2024-08-03T00:00:00Z"), _scene("base")],
     )
-    monkeypatch.setattr(agent_skeleton, "analyze_recent_change", lambda scenes: (0.2, scenes))
+    monkeypatch.setattr(agent_skeleton, "analyze_recent_change", lambda scenes, **kwargs: (0.2, scenes))
 
     alert = agent_skeleton.run_pipeline(
         bbox=[0, 0, 1, 1],

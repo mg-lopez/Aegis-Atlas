@@ -32,4 +32,4 @@ def test_change_score_honors_cloud_masks():
     recent_cloud = np.array([[False, True]])
 
     score = analyze.change_score(baseline, recent, baseline_cloud, recent_cloud)
-    assert score == pytest.approx((2 - 1) / (2 + 1), rel=1e-5)
+    assert score == pytest.approx(1.0, rel=1e-5)

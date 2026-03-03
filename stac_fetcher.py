@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Iterable
+
+import requests
 
 try:
     import planetary_computer
@@ -26,14 +30,18 @@ class SceneSummary:
     id: str
     datetime: str
     cloud_cover: float | None
-    assets: list[str]
+    assets: dict[str, str]
+
+
+
+def scene_to_dict(scene: SceneSummary) -> dict[str, Any]:
+    """Return a JSON-serializable scene dictionary."""
+
+    return asdict(scene)
 
 
 def _get_cloud_cover(item: Any) -> float:
-    """Return cloud-cover value for ranking when available.
-
-    Items with no cloud metadata are ranked last by returning 100.
-    """
+    """Return cloud-cover value for ranking when available."""
 
     cloud = item.properties.get("eo:cloud_cover")
     if cloud is None:
@@ -46,11 +54,12 @@ def _to_scene_summary(item: Any) -> SceneSummary:
 
     dt = item.properties.get("datetime") or ""
     cloud = item.properties.get("eo:cloud_cover")
+    assets = {name: asset.href for name, asset in item.assets.items()}
     return SceneSummary(
         id=item.id,
         datetime=dt,
         cloud_cover=float(cloud) if cloud is not None else None,
-        assets=sorted(item.assets.keys()),
+        assets=assets,
     )
 
 
@@ -62,19 +71,7 @@ def find_best_sentinel_scenes(
     limit: int = 3,
     collection: str = DEFAULT_COLLECTION,
 ) -> list[SceneSummary]:
-    """Find the best Sentinel-2 L2A scenes for a region and date range.
-
-    Args:
-        bbox: Bounding box as ``[min_lon, min_lat, max_lon, max_lat]``.
-        start_date: Start date (inclusive) in ``YYYY-MM-DD`` format.
-        end_date: End date (inclusive) in ``YYYY-MM-DD`` format.
-        max_cloud: Maximum acceptable cloud cover percentage.
-        limit: Maximum number of scenes to return.
-        collection: STAC collection id, defaults to Sentinel-2 L2A.
-
-    Returns:
-        A list of scenes sorted from lowest cloud-cover to highest.
-    """
+    """Find the best Sentinel-2 L2A scenes for a region and date range."""
 
     time_range = f"{start_date}/{end_date}"
     if Client is None:
@@ -95,3 +92,56 @@ def find_best_sentinel_scenes(
     filtered = [item for item in items if _get_cloud_cover(item) <= float(max_cloud)]
     ranked = sorted(filtered, key=_get_cloud_cover)
     return [_to_scene_summary(item) for item in ranked[:limit]]
+
+
+def download_asset(
+    scene: SceneSummary,
+    asset_name: str,
+    download_dir: str | Path,
+    debug_dir: str | Path,
+) -> Path:
+    """Download one scene asset and append signed URL diagnostics to debug logs."""
+
+    if asset_name not in scene.assets:
+        raise KeyError(f"Asset '{asset_name}' not available in scene {scene.id}")
+
+    raw_href = scene.assets[asset_name]
+    signed_href = (
+        planetary_computer.sign(raw_href)
+        if planetary_computer is not None and raw_href.startswith("http")
+        else raw_href
+    )
+
+    debug_path = Path(debug_dir)
+    debug_path.mkdir(parents=True, exist_ok=True)
+    log_file = debug_path / "signed_urls.jsonl"
+    with log_file.open("a", encoding="utf-8") as fh:
+        fh.write(
+            json.dumps(
+                {
+                    "scene_id": scene.id,
+                    "asset": asset_name,
+                    "raw_href": raw_href,
+                    "signed_href": signed_href,
+                }
+            )
+            + "\n"
+        )
+
+    out_dir = Path(download_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    suffix = Path(raw_href).suffix or ".tif"
+    destination = out_dir / f"{scene.id}_{asset_name}{suffix}"
+
+    if raw_href.startswith("http"):
+        with requests.get(signed_href, stream=True, timeout=180) as response:
+            response.raise_for_status()
+            with destination.open("wb") as out:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        out.write(chunk)
+    else:
+        source = Path(raw_href)
+        destination.write_bytes(source.read_bytes())
+
+    return destination
