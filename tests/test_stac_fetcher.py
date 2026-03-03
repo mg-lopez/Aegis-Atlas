@@ -35,7 +35,7 @@ def make_item(item_id: str, cloud: float | None):
     properties = {"datetime": "2024-08-01T00:00:00Z"}
     if cloud is not None:
         properties["eo:cloud_cover"] = cloud
-    return SimpleNamespace(id=item_id, properties=properties, assets={"B04": object(), "B08": object()})
+    return SimpleNamespace(id=item_id, properties=properties, assets={"B04": SimpleNamespace(href="https://example/B04.tif"), "B08": SimpleNamespace(href="https://example/B08.tif")})
 
 
 def test_find_best_sentinel_scenes_sorts_by_cloud_cover(monkeypatch):

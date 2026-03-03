@@ -44,12 +44,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bbox", type=_parse_bbox, default=DEFAULT_BBOX)
     parser.add_argument("--start-date", default=DEFAULT_START_DATE)
     parser.add_argument("--end-date", default=DEFAULT_END_DATE)
+    parser.add_argument("--use-sample", action="store_true", help="Run deterministic sample mode")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
-    alert = run_demo(bbox=args.bbox, start_date=args.start_date, end_date=args.end_date)
+    alert = run_demo(
+        bbox=args.bbox,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        use_sample=args.use_sample,
+    )
 
     OUTPUT_PATH.write_text(json.dumps(alert, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(alert, indent=2))
