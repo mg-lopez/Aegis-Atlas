@@ -14,4 +14,9 @@ demo/sample_recent.tif
 
 # Local persistence stores
 data/alert_history.jsonl
+data/incidents.json
 data/watchlists.json
+
+# Local review assets / planning docs
+demo_dashboard.png
+development_plan*.txt

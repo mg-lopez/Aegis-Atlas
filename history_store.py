@@ -27,7 +27,7 @@ def append_history(entry: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
-def read_recent_history(limit: int = 20) -> list[dict[str, Any]]:
+def read_all_history() -> list[dict[str, Any]]:
     if not HISTORY_FILE.exists():
         return []
     rows: list[dict[str, Any]] = []
@@ -40,4 +40,16 @@ def read_recent_history(limit: int = 20) -> list[dict[str, Any]]:
                 rows.append(json.loads(line))
             except json.JSONDecodeError:
                 continue
+    return rows
+
+
+def read_recent_history(limit: int = 20) -> list[dict[str, Any]]:
+    rows = read_all_history()
     return rows[-max(1, int(limit)) :][::-1]
+
+
+def read_history_by_id(history_id: str) -> dict[str, Any] | None:
+    for row in reversed(read_all_history()):
+        if str(row.get("id", "")) == str(history_id):
+            return row
+    return None
