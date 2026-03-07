@@ -183,7 +183,7 @@ const LENS_LAYOUT = {
     hiddenPanels: ["lens", "presets", "instability", "context", "analysis-banner", "insight"],
     hiddenDecks: ["evidence", "history"],
     hiddenAnalytics: ["health"],
-    defaultDeck: "watchlists",
+    defaultDeck: "scan-brief",
     defaultAnalytics: "trend",
   },
   logistics: {
@@ -191,7 +191,7 @@ const LENS_LAYOUT = {
     hiddenPanels: ["lens", "presets", "instability", "context", "analysis-banner", "insight"],
     hiddenDecks: ["history", "evidence"],
     hiddenAnalytics: ["health"],
-    defaultDeck: "watchlists",
+    defaultDeck: "scan-brief",
     defaultAnalytics: "watchlist",
   },
   energy: {
@@ -199,7 +199,7 @@ const LENS_LAYOUT = {
     hiddenPanels: ["lens", "presets", "instability", "context", "analysis-banner", "insight"],
     hiddenDecks: ["history", "evidence"],
     hiddenAnalytics: ["feed"],
-    defaultDeck: "analytics",
+    defaultDeck: "scan-brief",
     defaultAnalytics: "health",
   },
   insurance: {
@@ -207,7 +207,7 @@ const LENS_LAYOUT = {
     hiddenPanels: ["lens", "presets", "instability", "context", "analysis-banner", "insight"],
     hiddenDecks: ["history", "evidence"],
     hiddenAnalytics: ["watchlist"],
-    defaultDeck: "analytics",
+    defaultDeck: "scan-brief",
     defaultAnalytics: "trend",
   },
   humanitarian: {
@@ -215,7 +215,7 @@ const LENS_LAYOUT = {
     hiddenPanels: ["lens", "presets", "instability", "context", "analysis-banner", "insight"],
     hiddenDecks: ["history", "evidence"],
     hiddenAnalytics: ["signals"],
-    defaultDeck: "incidents",
+    defaultDeck: "scan-brief",
     defaultAnalytics: "feed",
   },
   security: {
@@ -223,7 +223,7 @@ const LENS_LAYOUT = {
     hiddenPanels: ["lens", "presets", "instability", "context", "analysis-banner", "insight"],
     hiddenDecks: ["history", "evidence"],
     hiddenAnalytics: ["watchlist"],
-    defaultDeck: "incidents",
+    defaultDeck: "scan-brief",
     defaultAnalytics: "instability",
   },
 };
@@ -256,6 +256,8 @@ const leftLensPanels = Array.from(document.querySelectorAll(".rail-left [data-le
 const rightLensPanels = Array.from(document.querySelectorAll(".rail-right [data-lens-panel]"));
 const deckTabEls = Array.from(document.querySelectorAll(".deck-tab"));
 const deckPanelEls = Array.from(document.querySelectorAll("[data-deck-panel]"));
+const watchlistTabEls = Array.from(document.querySelectorAll(".watchlist-tab"));
+const watchlistPanelEls = Array.from(document.querySelectorAll("[data-watchlist-panel]"));
 const analyticsTabEls = Array.from(document.querySelectorAll(".analytics-tab"));
 const analyticsChartTitleEl = document.getElementById("analytics-chart-title");
 const analyticsChartSubtitleEl = document.getElementById("analytics-chart-subtitle");
@@ -319,6 +321,9 @@ const rescanAnalysisBtn = document.getElementById("rescan-analysis-btn");
 const decisionPriorityEl = document.getElementById("decision-priority");
 const decisionCaveatEl = document.getElementById("decision-caveat");
 const incidentContextNoteEl = document.getElementById("incident-context-note");
+const aiInsightHeadlineEl = document.getElementById("ai-insight-headline");
+const aiInsightSummaryEl = document.getElementById("ai-insight-summary");
+const aiInsightListEl = document.getElementById("ai-insight-list");
 const briefModeEl = document.getElementById("brief-mode");
 const briefAoiEl = document.getElementById("brief-aoi");
 const briefDominantEl = document.getElementById("brief-dominant");
@@ -348,7 +353,13 @@ const watchlistNameEl = document.getElementById("watchlist-name");
 const watchlistMembersEl = document.getElementById("watchlist-members");
 const createWatchlistBtn = document.getElementById("create-watchlist-btn");
 const scanWatchlistBtn = document.getElementById("scan-watchlist-btn");
+const deleteWatchlistBtn = document.getElementById("delete-watchlist-btn");
 const watchlistSelectEl = document.getElementById("watchlist-select");
+const watchlistAlertEmailEl = document.getElementById("watchlist-alert-email");
+const watchlistAlertSmsEl = document.getElementById("watchlist-alert-sms");
+const watchlistEmailEnabledEl = document.getElementById("watchlist-email-enabled");
+const watchlistSmsEnabledEl = document.getElementById("watchlist-sms-enabled");
+const saveWatchlistAlertsBtn = document.getElementById("save-watchlist-alerts-btn");
 const watchlistSummaryEl = document.getElementById("watchlist-summary");
 const watchlistHealthNoteEl = document.getElementById("watchlist-health-note");
 const watchlistTopHotspotEl = document.getElementById("watchlist-top-hotspot");
@@ -412,6 +423,7 @@ let lastStatusDetail = "Map workspace synced and awaiting analysis.";
 let lastSyncAt = null;
 let availablePresets = [];
 let hasBootstrappedPreset = false;
+let availableWatchlists = [];
 
 const mapIntelLayers = {
   heatmap: L.layerGroup().addTo(map),
@@ -516,6 +528,16 @@ const setDeckTab = (targetName) => {
   });
   deckPanelEls.forEach((panel) => {
     panel.classList.toggle("active", !panel.hidden && panel.dataset.deckPanel === resolved);
+  });
+};
+
+const setWatchlistTab = (targetName) => {
+  const resolved = resolveVisibleTarget(watchlistTabEls, "watchlistTarget", targetName);
+  watchlistTabEls.forEach((button) => {
+    button.classList.toggle("active", !button.hidden && button.dataset.watchlistTarget === resolved);
+  });
+  watchlistPanelEls.forEach((panel) => {
+    panel.classList.toggle("active", !panel.hidden && panel.dataset.watchlistPanel === resolved);
   });
 };
 
@@ -638,6 +660,61 @@ const renderLensInsight = (insight = null) => {
   setTone(lensInsightCaveatEl, insight.caveat_tone || "neutral");
   renderTags(lensInsightActionsEl, insight.actions || []);
   lensInsightChipEl.textContent = `${toTitle(insight.lens_label || lensSelect.value)} • ${formatThreat(insight.threat_label || "n/a")}`;
+};
+
+const renderAiInsight = (payload = null) => {
+  if (!payload) {
+    aiInsightHeadlineEl.textContent = "Awaiting first scan";
+    aiInsightSummaryEl.textContent = "Aegis Atlas will translate the incoming risk, signal, and evidence data into a short protective guidance block here.";
+    setList(
+      aiInsightListEl,
+      ["Run an analysis to generate lens-aware advice and concrete protective steps."],
+      "Run an analysis to generate lens-aware advice and concrete protective steps."
+    );
+    return;
+  }
+
+  const brief = payload.brief || {};
+  const insight = payload.lens_insight || {};
+  const actions = [
+    ...(Array.isArray(insight.actions) ? insight.actions : []),
+    ...(Array.isArray(brief.next_steps) ? brief.next_steps : []),
+  ];
+  const uniqueActions = [...new Set(actions.filter(Boolean))].slice(0, 4);
+  aiInsightHeadlineEl.textContent = insight.headline || brief.headline || "Protective guidance ready";
+  aiInsightSummaryEl.textContent = insight.caveat || brief.summary || payload.recommended_action || "Review the supporting evidence and act according to the current threat posture.";
+  setList(aiInsightListEl, uniqueActions, "No protective actions returned for the current scan.");
+};
+
+const currentSelectedWatchlist = () => availableWatchlists.find((item) => item.id === watchlistSelectEl.value) || null;
+
+const syncWatchlistActionState = () => {
+  const hasSelection = Boolean(currentSelectedWatchlist());
+  deleteWatchlistBtn.disabled = !hasSelection;
+  saveWatchlistAlertsBtn.disabled = !hasSelection;
+};
+
+const hydrateWatchlistEditor = (watchlist = null) => {
+  if (!watchlist) {
+    watchlistAlertEmailEl.value = "";
+    watchlistAlertSmsEl.value = "";
+    watchlistEmailEnabledEl.checked = true;
+    watchlistSmsEnabledEl.checked = false;
+    syncWatchlistActionState();
+    return;
+  }
+
+  watchlistNameEl.value = watchlist.name || "";
+  watchlistMembersEl.value = (watchlist.members || [])
+    .map((member) => `${member.label},${member.lat},${member.lon}`)
+    .join("\n");
+
+  const alerts = watchlist.alerts || {};
+  watchlistAlertEmailEl.value = alerts.email_to || "";
+  watchlistAlertSmsEl.value = alerts.sms_to || "";
+  watchlistEmailEnabledEl.checked = Boolean(alerts.email_enabled ?? alerts.email_to);
+  watchlistSmsEnabledEl.checked = Boolean(alerts.sms_enabled && alerts.sms_to);
+  syncWatchlistActionState();
 };
 
 const renderDecisionSurface = (payload = null) => {
@@ -820,7 +897,7 @@ const applyOverview = (payload) => {
 const applyLensExperience = ({ resetMapDefaults = false } = {}) => {
   const ui = currentLensUi();
   document.body.dataset.lens = lensSelect.value || "general";
-  document.body.dataset.layout = ui.layoutProfile || "balanced";
+  document.body.dataset.layout = "stable";
 
   workspaceTitleEl.textContent = ui.workspaceTitle;
   workspaceNoteEl.textContent = ui.workspaceNote;
@@ -1481,7 +1558,7 @@ const renderMapLayers = (payload) => {
     });
     markerLayer.on("click", () => {
       stageMapLocation(point, { loadLens: true, fit: true });
-      setDeckTab(point.source_type === "watchlist" ? "watchlists" : point.source_type === "incident" ? "incidents" : "history");
+      setDeckTab(point.source_type === "watchlist" ? "watchlists" : point.source_type === "incident" ? "incidents" : "scan-brief");
       setStatus(`Hotspot loaded: ${point.label || point.member_label || "location"}.`, "neutral");
     });
     mapIntelLayers.hotspots.addLayer(markerLayer);
@@ -1668,6 +1745,7 @@ const renderResult = (payload) => {
   briefLensEl.textContent = brief.lens_label || payload.lens_label || "N/A";
   renderTags(briefTagsEl, brief.customer_tags || []);
   renderLensInsight(payload.lens_insight || null);
+  renderAiInsight(payload);
   renderDecisionSurface(payload);
   renderTrend(payload.trend || brief.trend || null);
   renderEvidenceHealth(payload.evidence_health || brief.evidence_health || null);
@@ -1807,7 +1885,7 @@ const loadBulletins = async ({ silent = true } = {}) => {
   try {
     const payload = await fetchJson(`/api/feed/bulletins?lens=${encodeURIComponent(lensSelect.value || "general")}&limit=5`);
     renderBulletins(payload.items || []);
-    flashElement(bulletinsListEl.closest(".rail-panel"));
+    flashElement(bulletinsListEl.closest(".bulletins-panel, .rail-panel, .deck-panel"));
   } catch (err) {
     if (!silent) {
       setStatus(`Error: ${err.message}`, "error");
@@ -1946,6 +2024,7 @@ const loadPresets = async () => {
 const loadWatchlists = async (selectedId = null) => {
   const payload = await fetchJson("/api/watchlists");
   const items = payload.items || [];
+  availableWatchlists = items;
   commandWatchlistsEl.textContent = String(items.length);
   watchlistSelectEl.innerHTML = "";
   if (!items.length) {
@@ -1953,17 +2032,20 @@ const loadWatchlists = async (selectedId = null) => {
     opt.value = "";
     opt.textContent = "No watchlists";
     watchlistSelectEl.appendChild(opt);
+    hydrateWatchlistEditor(null);
     return;
   }
+  const preferredId = selectedId || watchlistSelectEl.value || (items[0] && items[0].id) || "";
   items.forEach((item) => {
     const opt = document.createElement("option");
     opt.value = item.id;
     opt.textContent = `${item.name} (${(item.members || []).length} locations)`;
-    if (selectedId && item.id === selectedId) {
+    if (preferredId && item.id === preferredId) {
       opt.selected = true;
     }
     watchlistSelectEl.appendChild(opt);
   });
+  hydrateWatchlistEditor(currentSelectedWatchlist());
 };
 
 const renderWatchlistSummary = (summary) => {
@@ -2201,6 +2283,7 @@ const saveIncident = async () => {
 
 const createWatchlist = async () => {
   let members;
+  const pendingAlerts = readWatchlistAlertForm();
   try {
     members = parseWatchlistMembers();
   } catch (err) {
@@ -2221,6 +2304,13 @@ const createWatchlist = async () => {
       }),
     });
     await loadWatchlists(payload.watchlist?.id || null);
+    watchlistAlertEmailEl.value = pendingAlerts.email_to;
+    watchlistAlertSmsEl.value = pendingAlerts.sms_to;
+    watchlistEmailEnabledEl.checked = pendingAlerts.email_enabled;
+    watchlistSmsEnabledEl.checked = pendingAlerts.sms_enabled;
+    if (pendingAlerts.email_to || pendingAlerts.sms_to) {
+      await saveWatchlistAlerts({ silent: true });
+    }
     await loadWatchlistTrends();
     await Promise.all([loadMapLayers(), loadLiveContext()]);
     setStatus("Watchlist created.", "success");
@@ -2229,6 +2319,75 @@ const createWatchlist = async () => {
   } finally {
     setButtonBusy(createWatchlistBtn, false);
     createWatchlistBtn.disabled = false;
+  }
+};
+
+const readWatchlistAlertForm = () => ({
+  email_to: watchlistAlertEmailEl.value.trim(),
+  sms_to: watchlistAlertSmsEl.value.trim(),
+  email_enabled: watchlistEmailEnabledEl.checked,
+  sms_enabled: watchlistSmsEnabledEl.checked,
+  threshold: "high",
+});
+
+const saveWatchlistAlerts = async ({ silent = false } = {}) => {
+  const watchlistId = watchlistSelectEl.value;
+  if (!watchlistId) {
+    if (!silent) {
+      setStatus("Select a watchlist first.", "error");
+    }
+    return false;
+  }
+
+  saveWatchlistAlertsBtn.disabled = true;
+  setButtonBusy(saveWatchlistAlertsBtn, true, "Saving...");
+  if (!silent) {
+    setStatus("Saving watchlist alerting...", "neutral");
+  }
+  try {
+    const payload = await fetchJson(`/api/watchlists/${watchlistId}/alerts`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(readWatchlistAlertForm()),
+    });
+    await loadWatchlists(payload.watchlist?.id || watchlistId);
+    if (!silent) {
+      setStatus("Watchlist alerting saved.", "success");
+    }
+    return true;
+  } catch (err) {
+    if (!silent) {
+      setStatus(`Error: ${err.message}`, "error");
+    }
+    return false;
+  } finally {
+    setButtonBusy(saveWatchlistAlertsBtn, false);
+    syncWatchlistActionState();
+  }
+};
+
+const removeWatchlist = async () => {
+  const watchlist = currentSelectedWatchlist();
+  if (!watchlist) {
+    setStatus("Select a watchlist first.", "error");
+    return;
+  }
+
+  deleteWatchlistBtn.disabled = true;
+  setButtonBusy(deleteWatchlistBtn, true, "Removing...");
+  setStatus(`Removing ${watchlist.name}...`, "neutral");
+  try {
+    await fetchJson(`/api/watchlists/${watchlist.id}`, { method: "DELETE" });
+    latestWatchlistPayload = null;
+    renderWatchlistSummary(null);
+    setList(watchlistResultsEl, [], "No watchlist scans yet.");
+    await Promise.all([loadWatchlists(), loadMapLayers(), loadLiveContext()]);
+    setStatus("Watchlist removed.", "success");
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, "error");
+  } finally {
+    setButtonBusy(deleteWatchlistBtn, false);
+    syncWatchlistActionState();
   }
 };
 
@@ -2243,6 +2402,7 @@ const scanWatchlist = async () => {
   setButtonBusy(scanWatchlistBtn, true, "Scanning...");
   setStatus("Scanning watchlist...", "neutral");
   try {
+    const notify = readWatchlistAlertForm();
     const payload = await fetchJson(`/api/watchlists/${watchlistId}/scan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2254,6 +2414,7 @@ const scanWatchlist = async () => {
         start_date: startDateInput.value,
         end_date: endDateInput.value,
         deep_live: modeSelect.value === "live" && deepLiveCheckbox.checked,
+        notify,
       }),
     }, 85000);
 
@@ -2278,6 +2439,7 @@ const scanWatchlist = async () => {
     await refreshHistory();
     await Promise.all([loadMapLayers(), loadLiveContext()]);
     setDeckTab("watchlists");
+    setWatchlistTab("results");
     setStatus(`Watchlist scan complete (${results.length} locations).`, "success");
   } catch (err) {
     setStatus(`Error: ${err.message}`, "error");
@@ -2314,7 +2476,7 @@ const runAnalysis = async () => {
     renderResult(result);
     await refreshHistory();
     await Promise.all([loadMapLayers(), loadLiveContext()]);
-    setDeckTab("history");
+    setDeckTab("scan-brief");
     setStatus(`Analysis complete (${result.mode.toUpperCase()} mode).`, "success");
   } catch (err) {
     setStatus(`Error: ${err.message}`, "error");
@@ -2362,6 +2524,10 @@ rescanAnalysisBtn.addEventListener("click", runAnalysis);
 geoBtn.addEventListener("click", useBrowserLocation);
 createWatchlistBtn.addEventListener("click", createWatchlist);
 scanWatchlistBtn.addEventListener("click", scanWatchlist);
+deleteWatchlistBtn.addEventListener("click", removeWatchlist);
+saveWatchlistAlertsBtn.addEventListener("click", () => {
+  saveWatchlistAlerts().catch((err) => setStatus(`Error: ${err.message}`, "error"));
+});
 saveIncidentBtn.addEventListener("click", saveIncident);
 commandAnalyzeBtn.addEventListener("click", () => analyzeBtn.click());
 commandIncidentBtn.addEventListener("click", () => saveIncidentBtn.click());
@@ -2380,6 +2546,9 @@ refreshInstabilityBtn.addEventListener("click", () => {
 deckTabEls.forEach((button) => {
   button.addEventListener("click", () => setDeckTab(button.dataset.deckTarget));
 });
+watchlistTabEls.forEach((button) => {
+  button.addEventListener("click", () => setWatchlistTab(button.dataset.watchlistTarget));
+});
 [...analyticsTabEls].forEach((button) => {
   button.addEventListener("click", () => {
     setAnalyticsTab(button.dataset.analyticsTarget);
@@ -2391,6 +2560,7 @@ deckTabEls.forEach((button) => {
     input.addEventListener("change", syncMapLayerVisibility);
   });
 watchlistSelectEl.addEventListener("change", () => {
+  hydrateWatchlistEditor(currentSelectedWatchlist());
   loadWatchlistTrends().catch(() => undefined);
 });
 incidentListEl.addEventListener("click", async (event) => {
@@ -2405,7 +2575,7 @@ incidentListEl.addEventListener("click", async (event) => {
       return;
     }
     applyPreset(preset, { autorun: target.dataset.autorun === "true" });
-    setDeckTab(target.dataset.autorun === "true" ? "history" : "watchlists");
+    setDeckTab(target.dataset.autorun === "true" ? "scan-brief" : "watchlists");
     return;
   }
   const incidentId = target.dataset.incidentId;
@@ -2559,6 +2729,8 @@ lonInput.value = "-122.41940";
 radiusInput.value = "25";
 watchlistMembersEl.value = "HQ,37.7749,-122.4194\nPort,37.8044,-122.2712";
 watchlistNameEl.value = "Priority Assets";
+watchlistEmailEnabledEl.checked = true;
+watchlistSmsEnabledEl.checked = false;
 lensSelect.value = "general";
 marker.setLatLng([37.7749, -122.4194]);
 map.setView([37.7749, -122.4194], 8);
@@ -2569,8 +2741,11 @@ overlayModeEl.textContent = "SAMPLE";
 commandThreatEl.textContent = "N/A";
 commandTickerEl.textContent = "Awaiting live context.";
 renderDecisionSurface();
+renderAiInsight();
 syncIncidentButtonState();
-setDeckTab("watchlists");
+syncWatchlistActionState();
+setDeckTab("scan-brief");
+setWatchlistTab("overview");
 setAnalyticsTab("trend");
 syncCommandContext();
 syncMapLayerVisibility();

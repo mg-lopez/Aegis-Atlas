@@ -40,6 +40,7 @@ def create_watchlist(name: str, members: list[dict[str, Any]]) -> dict[str, Any]
         "id": str(uuid.uuid4()),
         "name": str(name).strip() or "Untitled Watchlist",
         "members": members,
+        "alerts": {},
         "created_at": now,
         "updated_at": now,
     }
@@ -54,3 +55,26 @@ def get_watchlist(watchlist_id: str) -> dict[str, Any] | None:
         if item.get("id") == watchlist_id:
             return item
     return None
+
+
+def update_watchlist_alerts(watchlist_id: str, alerts: dict[str, Any]) -> dict[str, Any] | None:
+    existing = _load_all()
+    now = datetime.now(timezone.utc).isoformat()
+    for item in existing:
+        if item.get("id") != watchlist_id:
+            continue
+        item["alerts"] = alerts
+        item["updated_at"] = now
+        _save_all(existing)
+        return item
+    return None
+
+
+def delete_watchlist(watchlist_id: str) -> dict[str, Any] | None:
+    existing = _load_all()
+    remaining = [item for item in existing if item.get("id") != watchlist_id]
+    if len(remaining) == len(existing):
+        return None
+    deleted = next((item for item in existing if item.get("id") == watchlist_id), None)
+    _save_all(remaining)
+    return deleted

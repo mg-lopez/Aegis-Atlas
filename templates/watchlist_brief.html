@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aegis Atlas Watchlist Brief</title>
+  <style>
+    :root {
+      --ink: #152128;
+      --muted: #61727d;
+      --line: #d9e2e6;
+      --panel: #f8fbfc;
+      --accent: #c89a2b;
+      --danger: #d66352;
+      --warn: #f4c86a;
+      --ok: #2f8f73;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); background: white; }
+    .page { max-width: 960px; margin: 0 auto; }
+    .header, .stats, .grid { display: grid; gap: 16px; }
+    .header { grid-template-columns: 1.3fr 1fr; align-items: end; padding-bottom: 20px; border-bottom: 2px solid var(--line); }
+    .eyebrow { margin: 0 0 8px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; font-size: 12px; font-weight: 700; }
+    h1 { margin: 0; font-size: 34px; line-height: 1.05; font-family: Georgia, serif; }
+    .summary { margin: 12px 0 0; color: var(--muted); line-height: 1.6; }
+    .stats { margin-top: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card, .row-card { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 14px; }
+    .label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .value { display: block; margin-top: 6px; font-size: 16px; font-weight: 700; }
+    .grid { margin-top: 22px; grid-template-columns: 1fr 1fr; }
+    h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    ul { margin: 0; padding-left: 18px; line-height: 1.6; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+    .pill { display: inline-block; padding: 5px 8px; border-radius: 999px; font-size: 11px; text-transform: uppercase; color: white; }
+    .pill.critical, .pill.high { background: var(--danger); }
+    .pill.medium { background: var(--warn); color: #563f00; }
+    .pill.low, .pill.none { background: var(--ok); }
+    .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    @media print { body { padding: 0; } .page { max-width: none; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <div>
+        <p class="eyebrow">Aegis Atlas Watchlist Brief</p>
+        <h1>{{ export.watchlist.name or 'Watchlist Brief' }}</h1>
+        <p class="summary">{{ export.summary.summary }}</p>
+      </div>
+      <div class="card">
+        <span class="label">Lens</span>
+        <span class="value">{{ export.lens_label or export.lens }}</span>
+        <span class="label" style="margin-top: 10px;">Mode</span>
+        <span class="value">{{ export.mode }}</span>
+      </div>
+    </header>
+
+    <section class="stats">
+      <article class="card">
+        <span class="label">Top Hotspot</span>
+        <span class="value">{{ export.summary.top_hotspot.member_label if export.summary.top_hotspot else 'None' }}</span>
+      </article>
+      <article class="card">
+        <span class="label">Average Score</span>
+        <span class="value">{{ '%.4f'|format(export.summary.average_score or 0) }}</span>
+      </article>
+      <article class="card">
+        <span class="label">Biggest Riser</span>
+        <span class="value">{{ export.summary.trends.biggest_riser.member_label if export.summary.trends and export.summary.trends.biggest_riser else 'None' }}</span>
+      </article>
+      <article class="card">
+        <span class="label">Generated</span>
+        <span class="value">{{ export.generated_at }}</span>
+      </article>
+    </section>
+
+    {% if export.alert_trigger %}
+      <section class="row-card" style="margin-top: 22px;">
+        <h2>Alert Trigger</h2>
+        <ul>
+          <li>{{ export.alert_trigger.member_label }} moved to {{ export.alert_trigger.threat_level|upper }}.</li>
+          <li>Confidence: {{ export.alert_trigger.confidence }} | Score: {{ '%.4f'|format(export.alert_trigger.score or 0) }}</li>
+          <li>{{ export.alert_trigger.recommended_action or 'Review the dashboard for the latest action guidance.' }}</li>
+        </ul>
+      </section>
+    {% endif %}
+
+    <section class="grid">
+      <article class="row-card">
+        <h2>Actions</h2>
+        <ul>
+          {% for item in export.summary.actions or [] %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </article>
+      <article class="row-card">
+        <h2>Trend and Health Notes</h2>
+        <ul>
+          <li>{{ export.summary.trends.summary if export.summary.trends else 'No trend summary available.' }}</li>
+          <li>{{ export.summary.health_note if export.summary.health_note else 'No watchlist health note available.' }}</li>
+          <li>Persistent hotspot: {{ export.summary.trends.most_persistent_hotspot.member_label if export.summary.trends and export.summary.trends.most_persistent_hotspot else 'None' }}</li>
+          <li>Newly elevated: {{ export.summary.trends.newly_elevated.member_label if export.summary.trends and export.summary.trends.newly_elevated else 'None' }}</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="row-card">
+        <h2>Analytics Snapshot</h2>
+        <ul>
+          <li>Scanned locations: {{ export.analytics_snapshot.scanned_locations or 0 }}</li>
+          <li>High or above: {{ export.analytics_snapshot.high_or_above or 0 }}</li>
+          <li>Medium or above: {{ export.analytics_snapshot.medium_or_above or 0 }}</li>
+          <li>Average score: {{ '%.4f'|format(export.analytics_snapshot.average_score or 0) }}</li>
+        </ul>
+      </article>
+      <article class="row-card">
+        <h2>Relevant Bulletins</h2>
+        <ul>
+          {% for item in export.recent_bulletins or [] %}
+            <li><strong>{{ item.title }}</strong>: {{ item.summary }}</li>
+          {% endfor %}
+        </ul>
+      </article>
+    </section>
+
+    <section class="row-card" style="margin-top: 22px;">
+      <h2>Top Results</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Threat</th>
+            <th>Score</th>
+            <th>Confidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in export.top_results or [] %}
+            <tr>
+              <td>{{ item.member_label }}</td>
+              <td><span class="pill {{ item.threat_level }}">{{ item.threat_level }}</span></td>
+              <td>{{ '%.4f'|format(item.score or 0) }}</td>
+              <td>{{ item.confidence }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="footer">
+      History ID: {{ history.id }}
+    </footer>
+  </main>
+</body>
+</html>

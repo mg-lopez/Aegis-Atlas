@@ -30,7 +30,7 @@ from trend_intel import (
     build_trend_summary,
     build_watchlist_trend_summary,
 )
-from watchlists import create_watchlist, get_watchlist, list_watchlists
+from watchlists import create_watchlist, delete_watchlist, get_watchlist, list_watchlists, update_watchlist_alerts
 
 app = Flask(__name__)
 app.logger.setLevel(logging.INFO)
@@ -369,6 +369,121 @@ def _watchlist_export_payload(
         "summary": summary,
         "results": results,
         "top_results": top_results,
+        "analytics_snapshot": _watchlist_analytics_snapshot(summary, results, mode=mode, lens=lens),
+        "recent_bulletins": _build_bulletins(lens, limit=4),
+        "alert_subscription": _normalize_watchlist_alerts(watchlist.get("alerts")),
+    }
+
+
+def _normalize_watchlist_alerts(raw_alerts: Any) -> dict[str, Any]:
+    alerts = raw_alerts if isinstance(raw_alerts, dict) else {}
+    email_to = str(alerts.get("email_to", "")).strip()
+    sms_to = str(alerts.get("sms_to", "")).strip()
+    threshold = str(alerts.get("threshold", "high")).strip().lower()
+    if threshold not in {"medium", "high", "critical"}:
+        threshold = "high"
+    return {
+        "email_enabled": bool(alerts.get("email_enabled", email_to)),
+        "sms_enabled": bool(alerts.get("sms_enabled", False) and sms_to),
+        "email_to": email_to,
+        "sms_to": sms_to,
+        "threshold": threshold,
+        "updated_at": alerts.get("updated_at"),
+    }
+
+
+def _watchlist_analytics_snapshot(
+    summary: dict[str, Any],
+    results: list[dict[str, Any]],
+    *,
+    mode: str,
+    lens: str,
+) -> dict[str, Any]:
+    ok_results = [item for item in results if item.get("ok") is True]
+    highest = next(
+        (
+            item for item in sorted(
+                ok_results,
+                key=lambda item: (
+                    THREAT_PRIORITY.get(str(item.get("threat_level", "none")), 0),
+                    float(item.get("score") or 0.0),
+                ),
+                reverse=True,
+            )
+        ),
+        None,
+    )
+    counts = {
+        level: sum(1 for item in ok_results if str(item.get("threat_level", "none")).lower() == level)
+        for level in ("critical", "high", "medium", "low", "none")
+    }
+    return {
+        "mode": mode,
+        "lens": lens,
+        "scanned_locations": len(ok_results),
+        "high_or_above": counts["critical"] + counts["high"],
+        "medium_or_above": counts["critical"] + counts["high"] + counts["medium"],
+        "average_score": summary.get("average_score"),
+        "top_hotspot": summary.get("top_hotspot"),
+        "highest_result": highest,
+    }
+
+
+def _build_watchlist_alert_package(
+    *,
+    watchlist: dict[str, Any],
+    summary: dict[str, Any],
+    results: list[dict[str, Any]],
+    mode: str,
+    lens: str,
+    triggered_result: dict[str, Any],
+) -> dict[str, str]:
+    export_payload = _watchlist_export_payload(
+        watchlist=watchlist,
+        summary=summary,
+        results=results,
+        mode=mode,
+        lens=lens,
+    )
+    export_payload["alert_trigger"] = {
+        "member_label": triggered_result.get("member_label"),
+        "threat_level": triggered_result.get("threat_level"),
+        "score": triggered_result.get("score"),
+        "confidence": triggered_result.get("confidence"),
+        "recommended_action": triggered_result.get("recommended_action"),
+    }
+    html_body = render_template(
+        "watchlist_brief.html",
+        export=export_payload,
+        history={"id": "alert-digest"},
+    )
+    analytics = export_payload.get("analytics_snapshot", {})
+    bulletins = export_payload.get("recent_bulletins", [])[:3]
+    text_lines = [
+        f"Watchlist: {watchlist.get('name') or 'Watchlist'}",
+        f"Triggered member: {triggered_result.get('member_label') or 'Unknown'}",
+        f"Threat level: {str(triggered_result.get('threat_level', 'unknown')).upper()}",
+        f"Score: {triggered_result.get('score')}",
+        f"Confidence: {triggered_result.get('confidence')}",
+        f"Recommended action: {triggered_result.get('recommended_action') or 'No recommendation available.'}",
+        "",
+        f"Scanned locations: {analytics.get('scanned_locations', len(results))}",
+        f"High or above: {analytics.get('high_or_above', 0)}",
+        f"Average score: {analytics.get('average_score')}",
+    ]
+    if bulletins:
+        text_lines.append("")
+        text_lines.append("Relevant bulletins:")
+        text_lines.extend(f"- {item.get('title')}: {item.get('summary')}" for item in bulletins)
+    sms_message = (
+        f"Aegis Atlas {str(triggered_result.get('threat_level', 'unknown')).upper()} "
+        f"alert for {triggered_result.get('member_label') or watchlist.get('name')}. "
+        f"{triggered_result.get('recommended_action') or 'Review the latest dashboard brief.'}"
+    )
+    return {
+        "html_body": html_body,
+        "text_body": "\n".join(text_lines).strip(),
+        "sms_message": sms_message,
     }
 
 
@@ -2133,6 +2248,14 @@ def get_watchlists() -> Any:
     return jsonify({"ok": True, "items": list_watchlists()})
 
 
+@app.delete("/api/watchlists/<watchlist_id>")
+def delete_watchlist_entry(watchlist_id: str) -> Any:
+    deleted = delete_watchlist(watchlist_id)
+    if deleted is None:
+        return jsonify({"ok": False, "error": "watchlist not found"}), 404
+    return jsonify({"ok": True, "watchlist": deleted})
+
+
 @app.get("/api/watchlists/<watchlist_id>/trends")
 def get_watchlist_trends(watchlist_id: str) -> Any:
     watchlist = get_watchlist(watchlist_id)
@@ -2169,6 +2292,22 @@ def post_watchlist() -> Any:
     return jsonify({"ok": True, "watchlist": created}), 201
 
 
+@app.put("/api/watchlists/<watchlist_id>/alerts")
+def put_watchlist_alerts(watchlist_id: str) -> Any:
+    payload = request.get_json(silent=True) or {}
+    alerts = _normalize_watchlist_alerts(payload)
+    updated = update_watchlist_alerts(
+        watchlist_id,
+        {
+            **alerts,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    if updated is None:
+        return jsonify({"ok": False, "error": "watchlist not found"}), 404
+    return jsonify({"ok": True, "watchlist": updated})
+
+
 @app.post("/api/watchlists/<watchlist_id>/scan")
 def scan_watchlist(watchlist_id: str) -> Any:
     watchlist = get_watchlist(watchlist_id)
@@ -2195,6 +2334,17 @@ def scan_watchlist(watchlist_id: str) -> Any:
     end_date = str(payload.get("end_date", now.isoformat()))
 
     notify_cfg = payload.get("notify") if isinstance(payload.get("notify"), dict) else {}
+    saved_alerts = _normalize_watchlist_alerts(watchlist.get("alerts"))
+    effective_alerts = {
+        **saved_alerts,
+        "email_to": str(notify_cfg.get("email_to", saved_alerts.get("email_to", ""))).strip(),
+        "sms_to": str(notify_cfg.get("sms_to", saved_alerts.get("sms_to", ""))).strip(),
+        "email_enabled": bool(notify_cfg.get("email_enabled", saved_alerts.get("email_enabled", False))),
+        "sms_enabled": bool(notify_cfg.get("sms_enabled", saved_alerts.get("sms_enabled", False))),
+        "threshold": str(notify_cfg.get("threshold", saved_alerts.get("threshold", "high"))).strip().lower() or "high",
+    }
+    if effective_alerts["threshold"] not in {"medium", "high", "critical"}:
+        effective_alerts["threshold"] = "high"
     results: list[dict[str, Any]] = []
     for member in watchlist.get("members", []):
         lat = float(member["lat"])
@@ -2232,11 +2382,7 @@ def scan_watchlist(watchlist_id: str) -> Any:
                 lens=lens,
                 deep_live=deep_live,
             )
-            response["notifications"] = notify_alert(
-                response,
-                webhook_url=str(notify_cfg.get("webhook_url", "")).strip() or None,
-                email_to=str(notify_cfg.get("email_to", "")).strip() or None,
-            )
+            response["notifications"] = []
             results.append(response)
         except Exception as exc:  # pragma: no cover
             results.append(
@@ -2259,8 +2405,28 @@ def scan_watchlist(watchlist_id: str) -> Any:
             )
 
     summary = _build_watchlist_summary(watchlist, results, lens_id=lens)
-
     summary = _attach_watchlist_trends(summary, watchlist_id, lens)
+
+    for result in results:
+        if result.get("ok") is not True:
+            continue
+        alert_package = _build_watchlist_alert_package(
+            watchlist=watchlist,
+            summary=summary,
+            results=results,
+            mode=response_mode,
+            lens=lens,
+            triggered_result=result,
+        )
+        result["notifications"] = notify_alert(
+            result,
+            webhook_url=str(notify_cfg.get("webhook_url", "")).strip() or None,
+            email_to=effective_alerts["email_to"] if effective_alerts["email_enabled"] else None,
+            html_body=alert_package["html_body"] if effective_alerts["email_enabled"] else None,
+            sms_to=effective_alerts["sms_to"] if effective_alerts["sms_enabled"] else None,
+            sms_message=alert_package["sms_message"] if effective_alerts["sms_enabled"] else None,
+            minimum_level=effective_alerts["threshold"],
+        )
 
     history_entry = append_history(
         {
