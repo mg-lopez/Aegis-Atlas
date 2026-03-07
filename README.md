@@ -4,6 +4,8 @@ Aegis Atlas is an autonomous Earth-intelligence agent that turns satellite data,
 
 The platform is designed for both professional operators and personal users. A logistics team can watch strategic corridors, an insurer can monitor severity and exposure, a security team can track escalation, and a family can keep a watchlist of loved ones and receive alerts when a location becomes high risk.
 
+<img width="2303" height="1397" alt="image" src="https://github.com/user-attachments/assets/3bd7a35d-07f8-48fb-b8c1-b8bd965bca71" />
+
 ## What It Does
 
 | Capability | What the user gets | Why it matters |
