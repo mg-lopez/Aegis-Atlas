@@ -6,7 +6,7 @@
   <title>Aegis Atlas Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -18,101 +18,723 @@
 <body>
   <div class="background-orb orb-a"></div>
   <div class="background-orb orb-b"></div>
+  <div class="background-grid"></div>
 
-  <main class="layout">
-    <section class="left-panel card reveal">
-      <p class="eyebrow">Aegis Atlas</p>
-      <h1>Earth Intelligence Dashboard</h1>
-      <p class="summary">
-        Choose a location to generate hazard intelligence from satellite change analysis and alert agents.
-      </p>
-
-      <div class="controls">
-        <label for="lat-input">Latitude</label>
-        <input id="lat-input" type="number" step="0.0001" placeholder="e.g. 37.7749" />
-
-        <label for="lon-input">Longitude</label>
-        <input id="lon-input" type="number" step="0.0001" placeholder="e.g. -122.4194" />
-
-        <label for="mode-select">Mode</label>
-        <select id="mode-select">
-          <option value="sample">Sample (Reliable Demo)</option>
-          <option value="live">Live STAC Query</option>
-        </select>
-
-        <div class="button-row">
-          <button id="geo-btn" class="btn secondary">Use My Location</button>
-          <button id="analyze-btn" class="btn primary">Analyze Risk</button>
+  <main class="terminal-shell">
+    <header class="command-strip card reveal">
+      <div class="command-brand">
+        <div class="hero-bar">
+          <p class="eyebrow">Aegis Atlas</p>
+          <span class="hero-chip">Earth Intelligence Terminal</span>
+        </div>
+        <div>
+          <h1>Map-first operational intelligence for live hazard and instability monitoring.</h1>
+          <p class="summary">Terminal-grade workflow for scan, corroboration, ranking, incident escalation, and customer delivery.</p>
         </div>
       </div>
 
-      <div id="status" class="status">Ready.</div>
-
-      <div class="results card-inner">
-        <div class="stat-row">
-          <span>Threat Level</span>
-          <strong id="threat-level" class="pill neutral">N/A</strong>
+      <div class="command-centerline">
+        <div class="command-tape">
+          <span class="mini-label">Pipeline State</span>
+          <strong id="command-status">Ready.</strong>
+          <p id="command-substatus">Map workspace synced and awaiting analysis.</p>
+          <div class="command-ticker-shell">
+            <span class="mini-label">Threat Tape</span>
+            <p id="command-ticker" class="command-ticker">Awaiting live context.</p>
+          </div>
         </div>
-        <div class="stat-row">
-          <span>Confidence</span>
-          <strong id="confidence">N/A</strong>
+        <div class="command-actions">
+          <button id="command-analyze-btn" class="btn primary" type="button">Analyze</button>
+          <button id="command-incident-btn" class="btn secondary" type="button">Queue Incident</button>
         </div>
-        <div class="stat-row">
-          <span>Score</span>
-          <strong id="score">N/A</strong>
-        </div>
-        <div class="stat-row">
-          <span>Last Updated</span>
-          <strong id="last-updated">N/A</strong>
-        </div>
-
-        <h2>Recommended Action</h2>
-        <p id="action-text">Run an analysis to see location-specific guidance.</p>
-
-        <h2>Signal Sources</h2>
-        <ul id="sources-list">
-          <li>None yet</li>
-        </ul>
-
-        <h2>Why This Alert</h2>
-        <ul id="rationale-list">
-          <li>No rationale yet</li>
-        </ul>
-
-        <h2>Signal Breakdown</h2>
-        <ul id="signals-list">
-          <li>No signal details yet</li>
-        </ul>
       </div>
 
-      <div class="results card-inner">
-        <h2>Watchlists</h2>
-        <label for="watchlist-name">Watchlist Name</label>
-        <input id="watchlist-name" type="text" placeholder="e.g. Family West Coast" />
-        <label for="watchlist-members">Members (one per line: label,lat,lon)</label>
-        <textarea id="watchlist-members" rows="4" placeholder="Home,34.0522,-118.2437"></textarea>
-        <div class="button-row">
-          <button id="create-watchlist-btn" class="btn secondary">Create Watchlist</button>
-          <button id="scan-watchlist-btn" class="btn primary">Scan Watchlist</button>
+      <div class="command-metrics">
+        <article class="command-metric">
+          <span>Lens</span>
+          <strong id="command-lens">General</strong>
+        </article>
+        <article class="command-metric">
+          <span>Mode</span>
+          <strong id="command-mode">Sample</strong>
+        </article>
+        <article class="command-metric">
+          <span>Threat</span>
+          <strong id="command-threat">N/A</strong>
+        </article>
+        <article class="command-metric">
+          <span>Open Incidents</span>
+          <strong id="command-incidents">0</strong>
+        </article>
+        <article class="command-metric">
+          <span>Watchlists</span>
+          <strong id="command-watchlists">0</strong>
+        </article>
+        <article class="command-metric">
+          <span>Last Sync</span>
+          <strong id="command-refresh">Awaiting sync</strong>
+        </article>
+      </div>
+    </header>
+
+    <section class="dashboard-grid">
+      <aside class="rail rail-left card reveal">
+        <section class="rail-panel controls-panel" data-lens-panel="controls">
+          <div class="section-head">
+            <div>
+              <h2>Control Panel</h2>
+              <p>Target the AOI, change the customer lens, and run the pipeline</p>
+            </div>
+          </div>
+
+          <div class="input-grid">
+            <div>
+              <label for="lat-input">Latitude</label>
+              <input id="lat-input" type="number" step="0.0001" placeholder="e.g. 37.7749" />
+            </div>
+            <div>
+              <label for="lon-input">Longitude</label>
+              <input id="lon-input" type="number" step="0.0001" placeholder="e.g. -122.4194" />
+            </div>
+            <div>
+              <label for="radius-input">AOI Radius (km)</label>
+              <input id="radius-input" type="number" min="5" max="250" step="1" value="25" />
+            </div>
+            <div>
+              <label for="mode-select">Mode</label>
+              <select id="mode-select">
+                <option value="sample">Sample</option>
+                <option value="live">Live</option>
+              </select>
+            </div>
+            <div>
+              <label for="start-date-input">Start Date</label>
+              <input id="start-date-input" type="date" />
+            </div>
+            <div>
+              <label for="end-date-input">End Date</label>
+              <input id="end-date-input" type="date" />
+            </div>
+            <div class="input-span-2">
+              <label for="risk-profile-select">Risk Profile</label>
+              <select id="risk-profile-select">
+                <option value="balanced">Balanced</option>
+                <option value="conservative">Conservative</option>
+                <option value="sensitive">Sensitive</option>
+              </select>
+            </div>
+            <div class="input-span-2">
+              <label for="lens-select">Customer Lens</label>
+              <select id="lens-select">
+                <option value="general">General</option>
+                <option value="logistics">Logistics</option>
+                <option value="energy">Energy</option>
+                <option value="insurance">Insurance</option>
+                <option value="humanitarian">Humanitarian</option>
+                <option value="security">Security / Defense</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="toggle-row" for="deep-live-checkbox">
+            <input id="deep-live-checkbox" type="checkbox" />
+            <span>
+              <strong>Deep live imagery</strong>
+              <small>Use the heavier scene comparison instead of the fast STAC scout estimate.</small>
+            </span>
+          </label>
+
+          <div class="button-row">
+            <button id="geo-btn" class="btn secondary" type="button">Use My Location</button>
+            <button id="analyze-btn" class="btn primary" type="button">Analyze Risk</button>
+          </div>
+
+          <div id="status" class="status" data-tone="neutral">Ready.</div>
+        </section>
+
+        <section class="rail-panel lens-profile-panel" data-lens-panel="lens">
+          <div class="section-head">
+            <div>
+              <h2 id="lens-profile-title">Lens Profile</h2>
+              <p id="lens-profile-summary">Balanced interpretation for broad hazard triage.</p>
+            </div>
+            <span id="lens-profile-chip" class="hero-chip">General</span>
+          </div>
+          <div class="hero-metrics hero-metrics-rail">
+            <div class="hero-metric">
+              <span>Priority</span>
+              <strong id="lens-profile-priority">Balanced triage</strong>
+            </div>
+            <div class="hero-metric">
+              <span>Map Emphasis</span>
+              <strong id="lens-profile-map">Multi-layer threat field</strong>
+            </div>
+            <div class="hero-metric">
+              <span>Operator Goal</span>
+              <strong id="lens-profile-action">Assess, rank, and act</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="rail-panel presets-panel" data-lens-panel="presets">
+          <div class="section-head">
+            <div>
+              <h2>Quick Presets</h2>
+              <p>Demo-ready hotspots and live starting points</p>
+            </div>
+          </div>
+          <div id="preset-chips" class="chip-grid">
+            <button type="button" class="preset-chip">Loading presets...</button>
+          </div>
+        </section>
+
+        <section class="rail-panel context-panel" data-lens-panel="context">
+          <div class="section-head">
+            <div>
+              <h2 id="context-title">Terminal Context</h2>
+              <p id="context-copy">What this screen is optimized to do</p>
+            </div>
+          </div>
+          <div class="hero-metrics hero-metrics-rail">
+            <div class="hero-metric">
+              <span id="context-metric-1-label">Fusion</span>
+              <strong id="context-metric-1-value">Satellite + geo risk</strong>
+            </div>
+            <div class="hero-metric">
+              <span id="context-metric-2-label">Workflow</span>
+              <strong id="context-metric-2-value">Analyze, rank, act</strong>
+            </div>
+            <div class="hero-metric">
+              <span id="context-metric-3-label">Output</span>
+              <strong id="context-metric-3-value">Customer-grade brief</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="rail-panel bulletins-panel" data-lens-panel="bulletins">
+          <div class="section-head">
+            <div>
+              <h2 id="bulletins-title">Live Bulletins + News</h2>
+              <p id="bulletins-copy">Compact feed combining incidents, hotspots, and live headline corroboration around the active operating picture.</p>
+            </div>
+            <button id="refresh-bulletins-btn" class="btn secondary" type="button">Refresh</button>
+          </div>
+          <div id="bulletins-list" class="bulletins-list">
+            <article class="bulletin-empty">No bulletins yet.</article>
+          </div>
+        </section>
+
+        <section class="rail-panel instability-panel" data-lens-panel="instability">
+          <div class="section-head">
+            <div>
+              <h2 id="instability-title">Instability Index</h2>
+              <p id="instability-copy">Aegis-derived regional instability ranking for ambient context.</p>
+            </div>
+            <button id="refresh-instability-btn" class="btn secondary" type="button">Refresh</button>
+          </div>
+          <div class="mini-grid compact-grid">
+            <article class="mini-card">
+              <span>Top Corridor</span>
+              <strong id="instability-top-name">N/A</strong>
+            </article>
+            <article class="mini-card">
+              <span>Current Tier</span>
+              <strong id="instability-top-band">N/A</strong>
+            </article>
+          </div>
+          <div id="instability-list" class="instability-list">
+            <article class="incident-empty">No instability ranking loaded.</article>
+          </div>
+        </section>
+      </aside>
+
+      <section class="center-stage reveal">
+        <div class="workspace-header workspace-header-terminal">
+          <div>
+            <p class="eyebrow">Spatial Workspace</p>
+            <h2 id="workspace-title" class="workspace-title">Interactive operating picture</h2>
+          </div>
+          <div id="workspace-note" class="workspace-note">
+            Reposition the AOI on the map. The terminal keeps the map in focus and moves detail into the rails and bottom deck.
+          </div>
         </div>
-        <label for="watchlist-select">Saved Watchlists</label>
-        <select id="watchlist-select"></select>
-        <ul id="watchlist-results">
-          <li>No watchlist scans yet.</li>
-        </ul>
-      </div>
 
-      <div class="results card-inner">
-        <h2>Recent History</h2>
-        <button id="refresh-history-btn" class="btn secondary">Refresh History</button>
-        <ul id="history-list">
-          <li>No history loaded.</li>
-        </ul>
-      </div>
-    </section>
+        <div class="map-shell card">
+          <div id="map"></div>
+          <div class="map-overlay">
+            <article class="overlay-card">
+              <span>Threat</span>
+              <strong id="overlay-threat">N/A</strong>
+            </article>
+            <article class="overlay-card">
+              <span>Mode</span>
+              <strong id="overlay-mode">N/A</strong>
+            </article>
+            <article class="overlay-card">
+              <span>AOI</span>
+              <strong id="overlay-aoi">25 km radius</strong>
+            </article>
+            <article class="overlay-card overlay-wide">
+              <span>Dominant Signal</span>
+              <strong id="overlay-signal">Awaiting scan</strong>
+            </article>
+          </div>
+          <aside class="map-intel-stack">
+            <section class="map-intel-card map-layers-card">
+              <div class="map-card-head">
+                <div>
+                  <span class="eyebrow">Layers</span>
+                  <h3>Map Intelligence</h3>
+                </div>
+                <span id="map-generated-at" class="map-card-meta">Awaiting refresh</span>
+              </div>
+              <div class="map-layer-list">
+                <label class="map-layer-toggle" for="layer-heatmap-toggle">
+                  <input id="layer-heatmap-toggle" type="checkbox" checked />
+                  <span>Threat Field</span>
+                  <strong id="layer-heatmap-count">0</strong>
+                </label>
+                <label class="map-layer-toggle" for="layer-hotspots-toggle">
+                  <input id="layer-hotspots-toggle" type="checkbox" checked />
+                  <span>Hotspots</span>
+                  <strong id="layer-hotspots-count">0</strong>
+                </label>
+                <label class="map-layer-toggle" for="layer-incidents-toggle">
+                  <input id="layer-incidents-toggle" type="checkbox" checked />
+                  <span>Incidents</span>
+                  <strong id="layer-incidents-count">0</strong>
+                </label>
+                <label class="map-layer-toggle" for="layer-watchlists-toggle">
+                  <input id="layer-watchlists-toggle" type="checkbox" checked />
+                  <span>Watchlists</span>
+                  <strong id="layer-watchlists-count">0</strong>
+                </label>
+                <label class="map-layer-toggle" for="layer-instability-toggle">
+                  <input id="layer-instability-toggle" type="checkbox" checked />
+                  <span>Instability</span>
+                  <strong id="layer-instability-count">0</strong>
+                </label>
+              </div>
+            </section>
 
-    <section class="map-panel reveal">
-      <div id="map"></div>
+            <section class="map-intel-card map-legend-card">
+              <div class="map-card-head">
+                <div>
+                  <span class="eyebrow">Legend</span>
+                  <h3>Threat Scale</h3>
+                </div>
+              </div>
+              <div class="map-legend-grid">
+                <div class="legend-item">
+                  <span class="legend-swatch critical"></span>
+                  <span>Critical</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-swatch high"></span>
+                  <span>High</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-swatch medium"></span>
+                  <span>Medium</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-swatch low"></span>
+                  <span>Low / none</span>
+                </div>
+              </div>
+              <p class="map-legend-note">
+                Filled fields show modeled risk intensity. Pins show actionable hotspots, incidents, and watchlist locations.
+              </p>
+            </section>
+          </aside>
+
+          <section id="map-focus-card" class="map-focus-card" data-tone="neutral">
+            <div class="map-card-head">
+              <div>
+                <span class="eyebrow">Focus</span>
+                <h3 id="map-focus-title">Global operating picture</h3>
+              </div>
+              <span id="map-focus-meta" class="map-card-meta">No hotspot selected</span>
+            </div>
+            <p id="map-focus-summary" class="map-focus-summary">
+              The intelligence layer will summarize hotspots, incidents, and instability corridors here as scans and watchlists accumulate.
+            </p>
+          </section>
+        </div>
+
+        <section class="deck card">
+          <div class="deck-header">
+            <div>
+              <h2>Operational Deck</h2>
+              <p>Compact fixed-height panels for watchlists, evidence, history, and incidents</p>
+            </div>
+            <div class="deck-tabs" role="tablist" aria-label="Operational deck tabs">
+              <button class="deck-tab active" type="button" data-deck-target="watchlists">Watchlists</button>
+              <button class="deck-tab" type="button" data-deck-target="analytics">Analytics</button>
+              <button class="deck-tab" type="button" data-deck-target="evidence">Evidence</button>
+              <button class="deck-tab" type="button" data-deck-target="history">History</button>
+              <button class="deck-tab" type="button" data-deck-target="incidents">Incidents</button>
+            </div>
+          </div>
+
+          <div class="deck-panels">
+            <section class="deck-panel active" data-deck-panel="watchlists">
+              <div class="section-head deck-panel-head">
+                <div>
+                  <h2>Watchlists</h2>
+                  <p>Rank hotspots across assets</p>
+                </div>
+              </div>
+
+              <div class="watchlist-layout">
+                <div class="watchlist-form-grid">
+                  <div>
+                    <label for="watchlist-name">Watchlist Name</label>
+                    <input id="watchlist-name" type="text" placeholder="e.g. West Coast Assets" />
+                  </div>
+                  <div>
+                    <label for="watchlist-select">Saved Watchlists</label>
+                    <select id="watchlist-select"></select>
+                  </div>
+                  <div class="watchlist-form-span">
+                    <label for="watchlist-members">Members (one per line: label,lat,lon)</label>
+                    <textarea id="watchlist-members" rows="4" placeholder="Port,29.7294,-95.2651"></textarea>
+                  </div>
+                </div>
+
+                <div class="button-row watchlist-button-row">
+                  <button id="create-watchlist-btn" class="btn secondary" type="button">Create Watchlist</button>
+                  <button id="scan-watchlist-btn" class="btn primary" type="button">Scan Watchlist</button>
+                </div>
+
+                <div id="watchlist-summary" class="watchlist-summary">No watchlist scan yet.</div>
+                <p id="watchlist-health-note" class="health-inline-note">Watchlist evidence-health note will appear here.</p>
+
+                <div class="mini-grid compact-grid">
+                  <article class="mini-card">
+                    <span>Top Hotspot</span>
+                    <strong id="watchlist-top-hotspot">N/A</strong>
+                  </article>
+                  <article class="mini-card">
+                    <span>Average Score</span>
+                    <strong id="watchlist-average-score">N/A</strong>
+                  </article>
+                </div>
+
+                <div class="trend-strip watchlist-trend-strip">
+                  <article class="trend-card">
+                    <span>Biggest Riser</span>
+                    <strong id="watchlist-biggest-riser">N/A</strong>
+                    <p id="watchlist-biggest-riser-detail">No trend history yet.</p>
+                  </article>
+                  <article class="trend-card">
+                    <span>Persistent Hotspot</span>
+                    <strong id="watchlist-persistent-hotspot">N/A</strong>
+                    <p id="watchlist-persistent-hotspot-detail">No persistent hotspot yet.</p>
+                  </article>
+                  <article class="trend-card">
+                    <span>Newly Elevated</span>
+                    <strong id="watchlist-newly-elevated">N/A</strong>
+                    <p id="watchlist-newly-elevated-detail">No newly elevated member yet.</p>
+                  </article>
+                </div>
+
+                <ul id="watchlist-results" class="plain-list deck-list">
+                  <li>No watchlist scans yet.</li>
+                </ul>
+              </div>
+            </section>
+
+            <section class="deck-panel" data-deck-panel="analytics">
+              <div class="section-head deck-panel-head">
+                <div>
+                  <h2>Analytics Strip</h2>
+                  <p>Compact visual intelligence for trend, signals, feeds, and watchlist movement</p>
+                </div>
+              </div>
+
+              <div class="analytics-shell">
+                <div class="analytics-tabs" role="tablist" aria-label="Analytics tabs">
+                  <button class="analytics-tab active" type="button" data-analytics-target="trend">Trend</button>
+                  <button class="analytics-tab" type="button" data-analytics-target="signals">Signals</button>
+                  <button class="analytics-tab" type="button" data-analytics-target="health">Health</button>
+                  <button class="analytics-tab" type="button" data-analytics-target="instability">Instability</button>
+                  <button class="analytics-tab" type="button" data-analytics-target="feed">Feed</button>
+                  <button class="analytics-tab" type="button" data-analytics-target="watchlist">Watchlist</button>
+                </div>
+
+                <div class="analytics-main">
+                  <section class="deck-subpanel analytics-chart-panel">
+                    <div class="section-head deck-panel-head">
+                      <div>
+                        <h2 id="analytics-chart-title">Trend trajectory</h2>
+                        <p id="analytics-chart-subtitle">Run a scan to populate the analytics strip.</p>
+                      </div>
+                    </div>
+                    <div id="analytics-chart" class="analytics-chart-shell">Awaiting analytics data.</div>
+                  </section>
+
+                  <section class="deck-subpanel analytics-side-panel">
+                    <div class="section-head deck-panel-head">
+                      <div>
+                        <h2 id="analytics-side-title">Key Metrics</h2>
+                        <p id="analytics-side-subtitle">Selected analytics context will appear here.</p>
+                      </div>
+                    </div>
+                    <div id="analytics-metrics" class="analytics-metrics-grid">
+                      <article class="mini-card">
+                        <span>Status</span>
+                        <strong>Awaiting data</strong>
+                      </article>
+                    </div>
+                    <ul id="analytics-notes" class="plain-list deck-list analytics-notes">
+                      <li>Run analysis, scan a watchlist, or wait for live context to populate the strip.</li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </section>
+
+            <section class="deck-panel" data-deck-panel="evidence">
+              <div class="dual-grid deck-dual-grid">
+                <section class="deck-subpanel">
+                  <div class="section-head deck-panel-head">
+                    <div>
+                      <h2>Signal Sources</h2>
+                      <p>Returned scenes and inputs</p>
+                    </div>
+                  </div>
+                  <ul id="sources-list" class="plain-list deck-list">
+                    <li>None yet.</li>
+                  </ul>
+                </section>
+
+                <section class="deck-subpanel">
+                  <div class="section-head deck-panel-head">
+                    <div>
+                      <h2>Why This Alert</h2>
+                      <p>Rationale and signal explainability</p>
+                    </div>
+                  </div>
+                  <ul id="rationale-list" class="plain-list deck-list">
+                    <li>No rationale yet.</li>
+                  </ul>
+                </section>
+              </div>
+
+              <section class="deck-subpanel deck-subpanel-full">
+                <div class="section-head deck-panel-head">
+                  <div>
+                    <h2>Signal Breakdown</h2>
+                    <p>Compact technical view of the contributing signals</p>
+                  </div>
+                </div>
+                <ul id="signals-list" class="plain-list deck-list">
+                  <li>No signal details yet.</li>
+                </ul>
+              </section>
+            </section>
+
+            <section class="deck-panel" data-deck-panel="history">
+              <div class="section-head deck-panel-head">
+                <div>
+                  <h2>Recent History</h2>
+                  <p>Track scans over time</p>
+                </div>
+                <button id="refresh-history-btn" class="btn secondary" type="button">Refresh</button>
+              </div>
+              <ul id="history-list" class="plain-list deck-list">
+                <li>No history loaded.</li>
+              </ul>
+            </section>
+
+            <section class="deck-panel" data-deck-panel="incidents">
+              <div class="section-head deck-panel-head">
+                <div>
+                  <h2>Incident Queue</h2>
+                  <p>Pin and revisit high-value scans</p>
+                </div>
+                <button id="refresh-incidents-btn" class="btn secondary" type="button">Refresh</button>
+              </div>
+              <div id="incident-list" class="incident-list">
+                <article class="incident-empty">No incidents pinned.</article>
+              </div>
+            </section>
+          </div>
+        </section>
+      </section>
+
+      <aside class="rail rail-right card reveal">
+        <section class="analysis-banner" data-lens-panel="analysis-banner">
+          <div class="hero-bar">
+            <p id="analysis-banner-eyebrow" class="eyebrow">Mission Brief</p>
+            <span id="analysis-banner-chip" class="hero-chip">Customer-grade readout</span>
+          </div>
+          <p id="analysis-banner-copy" class="analysis-banner-copy">The right rail stays dedicated to interpretation, trend, evidence trust, and immediate action.</p>
+        </section>
+
+        <section class="rail-panel lens-insight-panel" data-lens-panel="insight">
+          <div class="section-head">
+            <div>
+              <p class="mini-label">Tactical AI Read</p>
+              <h2 id="lens-insight-title">AI Lens Insight</h2>
+              <p id="lens-insight-kicker">How this matters for the current customer lens</p>
+            </div>
+            <span id="lens-insight-chip" class="hero-chip">Standby</span>
+          </div>
+          <div class="lens-insight-shell">
+            <h3 id="lens-insight-headline">Awaiting first scan.</h3>
+            <ul id="lens-insight-points" class="plain-list compact-list">
+              <li>The AI insight block will summarize why the result matters for the active lens.</li>
+              <li>It stays shorter and more tactical than the formal in-platform brief.</li>
+            </ul>
+            <p id="lens-insight-caveat" class="lens-insight-caveat">Caveat handling will appear here when evidence health is partial or degraded.</p>
+            <div id="lens-insight-actions" class="brief-tags">
+              <span class="tag muted-tag">Awaiting scan</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="rail-panel mission-panel" data-lens-panel="mission">
+          <div class="section-head">
+            <div>
+              <p class="mini-label">Scan Brief</p>
+              <h2 id="overview-title">Risk Overview</h2>
+              <p id="brief-quality">Awaiting first scan</p>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card">
+              <span id="metric-threat-label">Threat</span>
+              <strong id="threat-level" class="pill neutral">N/A</strong>
+            </article>
+            <article class="metric-card">
+              <span id="metric-confidence-label">Confidence</span>
+              <strong id="confidence">N/A</strong>
+            </article>
+            <article class="metric-card">
+              <span id="metric-score-label">Score</span>
+              <strong id="score">N/A</strong>
+            </article>
+            <article class="metric-card">
+              <span id="metric-updated-label">Updated</span>
+              <strong id="last-updated">N/A</strong>
+            </article>
+          </div>
+
+          <div class="brief-topline" hidden>
+            <div>
+              <p class="mini-label">Executive Summary</p>
+              <h3 id="brief-headline">Run a scan to generate an executive readout.</h3>
+            </div>
+            <div id="brief-tags" class="brief-tags"></div>
+          </div>
+
+          <p id="brief-summary" class="brief-summary" hidden>
+            Aegis Atlas will turn the raw detection output into a short, customer-facing operational brief.
+          </p>
+
+          <div class="decision-strip">
+            <article class="mini-card decision-card">
+              <span>Decision Priority</span>
+              <strong id="decision-priority">Awaiting scan</strong>
+            </article>
+            <article class="mini-card decision-card">
+              <span>Confidence Caveat</span>
+              <strong id="decision-caveat">Evidence caveat pending</strong>
+            </article>
+          </div>
+
+          <div class="export-row mission-action-row">
+            <button id="rescan-analysis-btn" class="btn secondary" type="button">Rescan AOI</button>
+            <button id="save-incident-btn" class="btn secondary" type="button" disabled>Save as Incident</button>
+          </div>
+          <p id="incident-context-note" class="incident-context-note">No linked incident for the current analysis context.</p>
+
+          <div class="mini-grid">
+            <article class="mini-card">
+              <span>Analysis Mode</span>
+              <strong id="brief-mode">N/A</strong>
+            </article>
+            <article class="mini-card">
+              <span>AOI</span>
+              <strong id="brief-aoi">N/A</strong>
+            </article>
+            <article class="mini-card">
+              <span>Dominant Signal</span>
+              <strong id="brief-dominant">N/A</strong>
+            </article>
+            <article class="mini-card">
+              <span>Evidence Quality</span>
+              <strong id="brief-quality-band">N/A</strong>
+            </article>
+            <article class="mini-card">
+              <span>Lens</span>
+              <strong id="brief-lens">N/A</strong>
+            </article>
+          </div>
+
+          <div class="trend-strip">
+            <article class="trend-card">
+              <span>Trend</span>
+              <strong id="trend-label">N/A</strong>
+              <p id="trend-summary">Need at least two scans to establish movement.</p>
+            </article>
+            <article class="trend-card">
+              <span>Delta</span>
+              <strong id="trend-delta">N/A</strong>
+              <p id="trend-points">0 scans tracked</p>
+            </article>
+            <article class="trend-card trend-card-wide">
+              <span>Recent Scan Pattern</span>
+              <div id="trend-sparkline" class="sparkline-placeholder">No history yet.</div>
+            </article>
+          </div>
+
+          <div class="health-strip">
+            <article class="health-card">
+              <span>Evidence Health</span>
+              <strong id="health-overall" data-tone="neutral">N/A</strong>
+              <p id="health-summary">No evidence-health summary yet.</p>
+            </article>
+            <article class="health-card">
+              <span>Satellite Freshness</span>
+              <strong id="health-satellite" data-tone="neutral">N/A</strong>
+              <p id="health-satellite-detail">No satellite detail yet.</p>
+            </article>
+            <article class="health-card">
+              <span>External Feeds</span>
+              <strong id="health-feeds" data-tone="neutral">N/A</strong>
+              <p id="health-feeds-detail">No feed-health detail yet.</p>
+            </article>
+            <article class="health-card">
+              <span>Coverage / Consensus</span>
+              <strong id="health-corroboration" data-tone="neutral">N/A</strong>
+              <p id="health-corroboration-detail">No corroboration summary yet.</p>
+            </article>
+          </div>
+
+          <div id="health-notes" class="brief-tags health-notes">
+            <span class="tag muted-tag">Health notes will appear here</span>
+          </div>
+
+          <div class="panel-grid mission-actions-grid">
+            <article class="subpanel">
+              <h2>Operational Impact</h2>
+              <ul id="impacts-list" class="plain-list">
+                <li>No impact summary yet.</li>
+              </ul>
+            </article>
+            <article class="subpanel">
+              <h2>Next Steps</h2>
+              <ul id="next-steps-list" class="plain-list">
+                <li>No next steps yet.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </aside>
     </section>
   </main>
 
