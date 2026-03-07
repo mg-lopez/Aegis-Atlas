@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -45,9 +46,10 @@ WEIGHT_SSIM = 0.35
 WEIGHT_SPECTRAL = 0.40
 WEIGHT_RGB = 0.25
 
-DEBUG_DIR = Path("/app/demo/debug")
+DEBUG_DIR = Path(__file__).resolve().parent / "demo" / "debug"
 ASSET_CACHE_DIR = Path("/tmp/aegis_assets")
 _VALID_EXTENSIONS = (".jp2", ".tif", ".tiff")
+MAX_READ_DIM = int(os.getenv("AEGIS_MAX_BAND_DIM", "1024"))
 
 
 def _ensure_debug_dir() -> Path:
@@ -63,11 +65,25 @@ def _normalize_band(arr: np.ndarray) -> np.ndarray:
     return np.clip((arr - p2) / (p98 - p2), 0, 1)
 
 
-def _read_single_band(path: Path) -> np.ndarray:
+def _read_single_band(path: Path, categorical: bool = False) -> np.ndarray:
     import rasterio
+    from rasterio.enums import Resampling
 
     with rasterio.open(path) as src:
-        return src.read(1).astype(np.float32)
+        height, width = src.height, src.width
+        scale = min(1.0, float(MAX_READ_DIM) / max(height, width))
+        if scale < 1.0:
+            out_h = max(1, int(round(height * scale)))
+            out_w = max(1, int(round(width * scale)))
+            resampling = Resampling.nearest if categorical else Resampling.bilinear
+            data = src.read(
+                1,
+                out_shape=(out_h, out_w),
+                resampling=resampling,
+            )
+        else:
+            data = src.read(1)
+        return data.astype(np.float32)
 
 
 def compute_simple_cloud_mask(scl_band: np.ndarray) -> np.ndarray:
@@ -79,7 +95,7 @@ def _download_band(scene_summary: SceneSummary, band: str) -> np.ndarray | None:
     if band not in scene_summary.assets:
         return None
     band_path = download_asset(scene_summary, band, ASSET_CACHE_DIR, DEBUG_DIR)
-    return _read_single_band(band_path)
+    return _read_single_band(band_path, categorical=(band == "SCL"))
 
 
 def load_rgb_and_mask(scene_summary: SceneSummary) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:

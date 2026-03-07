@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import stac_fetcher
@@ -87,3 +88,41 @@ def test_find_best_sentinel_scenes_handles_missing_cloud_metadata(monkeypatch):
     )
 
     assert [scene.id for scene in scenes] == ["known"]
+
+
+def test_download_asset_uses_safe_suffix_for_signed_urls(tmp_path, monkeypatch):
+    scene = stac_fetcher.SceneSummary(
+        id="scene-1",
+        datetime="2024-08-01T00:00:00Z",
+        cloud_cover=2.0,
+        assets={
+            "B04": (
+                "https://example.com/path/B04.tif"
+                "?st=2026-03-06T00%3A08%3A25Z&se=2026-03-07T00%3A53%3A25Z"
+                "&sig=abcdef"
+            )
+        },
+    )
+
+    class FakeResponse:
+        status_code = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size=1024):  # noqa: ARG002
+            yield b"fake-bytes"
+
+    monkeypatch.setattr(stac_fetcher.requests, "get", lambda *args, **kwargs: FakeResponse())
+
+    out = stac_fetcher.download_asset(scene, "B04", tmp_path / "assets", tmp_path / "debug")
+    assert out.exists()
+    assert out.suffix == ".tif"
+    assert "?" not in out.name
+    assert out.name == "scene-1_B04.tif"

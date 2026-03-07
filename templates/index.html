@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aegis Atlas Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="background-orb orb-a"></div>
+  <div class="background-orb orb-b"></div>
+
+  <main class="layout">
+    <section class="left-panel card reveal">
+      <p class="eyebrow">Aegis Atlas</p>
+      <h1>Earth Intelligence Dashboard</h1>
+      <p class="summary">
+        Choose a location to generate hazard intelligence from satellite change analysis and alert agents.
+      </p>
+
+      <div class="controls">
+        <label for="lat-input">Latitude</label>
+        <input id="lat-input" type="number" step="0.0001" placeholder="e.g. 37.7749" />
+
+        <label for="lon-input">Longitude</label>
+        <input id="lon-input" type="number" step="0.0001" placeholder="e.g. -122.4194" />
+
+        <label for="mode-select">Mode</label>
+        <select id="mode-select">
+          <option value="sample">Sample (Reliable Demo)</option>
+          <option value="live">Live STAC Query</option>
+        </select>
+
+        <div class="button-row">
+          <button id="geo-btn" class="btn secondary">Use My Location</button>
+          <button id="analyze-btn" class="btn primary">Analyze Risk</button>
+        </div>
+      </div>
+
+      <div id="status" class="status">Ready.</div>
+
+      <div class="results card-inner">
+        <div class="stat-row">
+          <span>Threat Level</span>
+          <strong id="threat-level" class="pill neutral">N/A</strong>
+        </div>
+        <div class="stat-row">
+          <span>Confidence</span>
+          <strong id="confidence">N/A</strong>
+        </div>
+        <div class="stat-row">
+          <span>Score</span>
+          <strong id="score">N/A</strong>
+        </div>
+        <div class="stat-row">
+          <span>Last Updated</span>
+          <strong id="last-updated">N/A</strong>
+        </div>
+
+        <h2>Recommended Action</h2>
+        <p id="action-text">Run an analysis to see location-specific guidance.</p>
+
+        <h2>Signal Sources</h2>
+        <ul id="sources-list">
+          <li>None yet</li>
+        </ul>
+
+        <h2>Why This Alert</h2>
+        <ul id="rationale-list">
+          <li>No rationale yet</li>
+        </ul>
+
+        <h2>Signal Breakdown</h2>
+        <ul id="signals-list">
+          <li>No signal details yet</li>
+        </ul>
+      </div>
+
+      <div class="results card-inner">
+        <h2>Watchlists</h2>
+        <label for="watchlist-name">Watchlist Name</label>
+        <input id="watchlist-name" type="text" placeholder="e.g. Family West Coast" />
+        <label for="watchlist-members">Members (one per line: label,lat,lon)</label>
+        <textarea id="watchlist-members" rows="4" placeholder="Home,34.0522,-118.2437"></textarea>
+        <div class="button-row">
+          <button id="create-watchlist-btn" class="btn secondary">Create Watchlist</button>
+          <button id="scan-watchlist-btn" class="btn primary">Scan Watchlist</button>
+        </div>
+        <label for="watchlist-select">Saved Watchlists</label>
+        <select id="watchlist-select"></select>
+        <ul id="watchlist-results">
+          <li>No watchlist scans yet.</li>
+        </ul>
+      </div>
+
+      <div class="results card-inner">
+        <h2>Recent History</h2>
+        <button id="refresh-history-btn" class="btn secondary">Refresh History</button>
+        <ul id="history-list">
+          <li>No history loaded.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="map-panel reveal">
+      <div id="map"></div>
+    </section>
+  </main>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -6,6 +6,8 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import unquote, urlsplit
+import os
 
 import requests
 
@@ -18,9 +20,15 @@ try:
     from pystac_client import Client
 except ModuleNotFoundError:  # pragma: no cover - optional at test time
     Client = None
+try:
+    from pystac_client.stac_api_io import StacApiIO
+except ModuleNotFoundError:  # pragma: no cover - optional at test time
+    StacApiIO = None
 
 PLANETARY_COMPUTER_STAC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
 DEFAULT_COLLECTION = "sentinel-2-l2a"
+STAC_HTTP_TIMEOUT = float(os.getenv("AEGIS_STAC_HTTP_TIMEOUT_SECONDS", "12"))
+STAC_MAX_RETRIES = int(os.getenv("AEGIS_STAC_MAX_RETRIES", "1"))
 
 
 @dataclass(frozen=True)
@@ -78,14 +86,23 @@ def find_best_sentinel_scenes(
         raise ModuleNotFoundError("pystac-client is required to query STAC")
 
     modifier = planetary_computer.sign_inplace if planetary_computer is not None else None
-    client = Client.open(PLANETARY_COMPUTER_STAC_URL, modifier=modifier)
+    if StacApiIO is not None:
+        stac_io = StacApiIO(timeout=STAC_HTTP_TIMEOUT, max_retries=STAC_MAX_RETRIES)
+        client = Client.open(
+            PLANETARY_COMPUTER_STAC_URL,
+            modifier=modifier,
+            stac_io=stac_io,
+            timeout=STAC_HTTP_TIMEOUT,
+        )
+    else:
+        client = Client.open(PLANETARY_COMPUTER_STAC_URL, modifier=modifier, timeout=STAC_HTTP_TIMEOUT)
 
     search = client.search(
         collections=[collection],
         bbox=list(bbox),
         datetime=time_range,
         query={"eo:cloud_cover": {"lte": max_cloud}},
-        limit=max(limit, 10),
+        limit=max(limit, 1),
     )
 
     items = list(search.items())
@@ -130,11 +147,11 @@ def download_asset(
 
     out_dir = Path(download_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    suffix = Path(raw_href).suffix or ".tif"
+    suffix = _asset_suffix(raw_href)
     destination = out_dir / f"{scene.id}_{asset_name}{suffix}"
 
     if raw_href.startswith("http"):
-        with requests.get(signed_href, stream=True, timeout=180) as response:
+        with requests.get(signed_href, stream=True, timeout=(10, 45)) as response:
             response.raise_for_status()
             with destination.open("wb") as out:
                 for chunk in response.iter_content(chunk_size=1024 * 1024):
@@ -145,3 +162,16 @@ def download_asset(
         destination.write_bytes(source.read_bytes())
 
     return destination
+
+
+def _asset_suffix(href: str) -> str:
+    """Return a safe extension for local asset filenames."""
+
+    parsed = urlsplit(href)
+    source_path = parsed.path if parsed.scheme else href
+    suffix = Path(unquote(source_path)).suffix
+    if not suffix:
+        return ".tif"
+    if len(suffix) > 10 or any(char in suffix for char in ("?", "&", "=")):
+        return ".tif"
+    return suffix

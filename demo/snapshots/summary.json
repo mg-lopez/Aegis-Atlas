@@ -1,0 +1,34 @@
+{
+  "scenarios": [
+    {
+      "name": "low",
+      "expected_threat_level": "low",
+      "actual_threat_level": "low",
+      "score": 0.18,
+      "confidence": "medium",
+      "snapshot_file": "demo/snapshots/low.json"
+    },
+    {
+      "name": "medium",
+      "expected_threat_level": "medium",
+      "actual_threat_level": "medium",
+      "score": 0.4467,
+      "confidence": "high",
+      "snapshot_file": "demo/snapshots/medium.json"
+    },
+    {
+      "name": "high",
+      "expected_threat_level": "high",
+      "actual_threat_level": "high",
+      "score": 0.789,
+      "confidence": "high",
+      "snapshot_file": "demo/snapshots/high.json"
+    }
+  ],
+  "generated_files": [
+    "demo/snapshots/low.json",
+    "demo/snapshots/medium.json",
+    "demo/snapshots/high.json",
+    "demo/snapshots/summary.json"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "region": [
+    -118.515537871451,
+    33.826974774774776,
+    -117.971862128549,
+    34.27742522522522
+  ],
+  "threat_level": "medium",
+  "score": 0.4467,
+  "confidence": "high",
+  "confidence_score": 0.8325,
+  "recommended_action": "Prepare to evacuate; monitor updates and assemble emergency kit.",
+  "sources": [
+    "scenario-medium-baseline",
+    "scenario-medium-recent"
+  ],
+  "rationale": [
+    "sentinel_change: score 0.42 with weight 0.55 (Scenario-defined Sentinel-2 delta score.)",
+    "usgs_seismic: score 0.52 with weight 0.20 (Scenario-defined USGS severity score.)",
+    "gdacs: no numeric score (No active GDACS event in scenario.)"
+  ],
+  "explainability": {
+    "active_signal_count": 2,
+    "coverage": 0.75,
+    "consensus": 0.9,
+    "signals": [
+      {
+        "key": "sentinel_change",
+        "source": "sentinel-2",
+        "hazard_type": "surface-change",
+        "status": "ok",
+        "score": 0.42,
+        "weight": 0.55,
+        "contribution": 0.231,
+        "details": "Scenario-defined Sentinel-2 delta score."
+      },
+      {
+        "key": "gdacs",
+        "source": "gdacs",
+        "hazard_type": "global-alert",
+        "status": "no_event",
+        "score": null,
+        "weight": 0.25,
+        "contribution": null,
+        "details": "No active GDACS event in scenario."
+      },
+      {
+        "key": "usgs_seismic",
+        "source": "usgs",
+        "hazard_type": "earthquake",
+        "status": "ok",
+        "score": 0.52,
+        "weight": 0.2,
+        "contribution": 0.104,
+        "details": "Scenario-defined USGS severity score."
+      }
+    ]
+  },
+  "scenario": {
+    "name": "medium",
+    "lat": 34.0522,
+    "lon": -118.2437,
+    "description": "Los Angeles scenario with moderate surface change and mild seismic support.",
+    "expected_threat_level": "medium"
+  }
+}

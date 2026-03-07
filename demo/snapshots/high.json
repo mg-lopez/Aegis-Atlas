@@ -1,0 +1,66 @@
+{
+  "region": [
+    -118.85480665319794,
+    34.12687477477478,
+    -118.30919334680205,
+    34.57732522522522
+  ],
+  "threat_level": "high",
+  "score": 0.789,
+  "confidence": "high",
+  "confidence_score": 0.9551,
+  "recommended_action": "Immediate evacuation advised; verify with authorities and proceed to nearest safe zone.",
+  "sources": [
+    "scenario-high-baseline",
+    "scenario-high-recent"
+  ],
+  "rationale": [
+    "sentinel_change: score 0.84 with weight 0.55 (Scenario-defined Sentinel-2 delta score.)",
+    "gdacs: score 0.78 with weight 0.25 (Scenario-defined GDACS overlap score.)",
+    "usgs_seismic: score 0.66 with weight 0.20 (Scenario-defined USGS severity score.)"
+  ],
+  "explainability": {
+    "active_signal_count": 3,
+    "coverage": 1.0,
+    "consensus": 0.8503,
+    "signals": [
+      {
+        "key": "sentinel_change",
+        "source": "sentinel-2",
+        "hazard_type": "surface-change",
+        "status": "ok",
+        "score": 0.84,
+        "weight": 0.55,
+        "contribution": 0.462,
+        "details": "Scenario-defined Sentinel-2 delta score."
+      },
+      {
+        "key": "gdacs",
+        "source": "gdacs",
+        "hazard_type": "global-alert",
+        "status": "ok",
+        "score": 0.78,
+        "weight": 0.25,
+        "contribution": 0.195,
+        "details": "Scenario-defined GDACS overlap score."
+      },
+      {
+        "key": "usgs_seismic",
+        "source": "usgs",
+        "hazard_type": "earthquake",
+        "status": "ok",
+        "score": 0.66,
+        "weight": 0.2,
+        "contribution": 0.132,
+        "details": "Scenario-defined USGS severity score."
+      }
+    ]
+  },
+  "scenario": {
+    "name": "high",
+    "lat": 34.3521,
+    "lon": -118.582,
+    "description": "Southern California escalation with strong satellite and multi-feed corroboration.",
+    "expected_threat_level": "high"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "region": [
+    -0.4894562531049398,
+    51.281974774774774,
+    0.2342562531049398,
+    51.73242522522522
+  ],
+  "threat_level": "low",
+  "score": 0.18,
+  "confidence": "medium",
+  "confidence_score": 0.6775,
+  "recommended_action": "No immediate action required; continue monitoring.",
+  "sources": [
+    "scenario-low-baseline",
+    "scenario-low-recent"
+  ],
+  "rationale": [
+    "sentinel_change: score 0.18 with weight 0.55 (Scenario-defined Sentinel-2 delta score.)",
+    "gdacs: no numeric score (No active GDACS event in scenario.)",
+    "usgs_seismic: no numeric score (No relevant seismic activity in scenario.)"
+  ],
+  "explainability": {
+    "active_signal_count": 1,
+    "coverage": 0.55,
+    "consensus": 0.75,
+    "signals": [
+      {
+        "key": "sentinel_change",
+        "source": "sentinel-2",
+        "hazard_type": "surface-change",
+        "status": "ok",
+        "score": 0.18,
+        "weight": 0.55,
+        "contribution": 0.099,
+        "details": "Scenario-defined Sentinel-2 delta score."
+      },
+      {
+        "key": "gdacs",
+        "source": "gdacs",
+        "hazard_type": "global-alert",
+        "status": "no_event",
+        "score": null,
+        "weight": 0.25,
+        "contribution": null,
+        "details": "No active GDACS event in scenario."
+      },
+      {
+        "key": "usgs_seismic",
+        "source": "usgs",
+        "hazard_type": "earthquake",
+        "status": "no_event",
+        "score": null,
+        "weight": 0.2,
+        "contribution": null,
+        "details": "No relevant seismic activity in scenario."
+      }
+    ]
+  },
+  "scenario": {
+    "name": "low",
+    "lat": 51.5072,
+    "lon": -0.1276,
+    "description": "London baseline monitoring with weak change signal and no external alerts.",
+    "expected_threat_level": "low"
+  }
+}

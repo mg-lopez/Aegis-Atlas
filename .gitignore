@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Local demo artifacts
+demo/debug/
+demo/last_alert.json
+demo/sample_baseline.tif
+demo/sample_recent.tif
+
+# Local notebook/runtime files
+.ipynb_checkpoints/
+
+# Local persistence stores
+data/alert_history.jsonl
+data/watchlists.json
